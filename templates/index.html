@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Annotator</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>  
+</head>
+<body>
+    <div class="container-fluid">
+            <div class="row container-fluid">
+                <div class="col-12">
+                    <center><h1 style="font-size:75px;background-color: blue;color: white;">ANNOTATOR</h1></center>
+                </div>
+            </div>
+            
+            <div class="row container-fluid">
+                <!-- Search Bar -->
+                <div class="col-3 container-fluid">
+                    <div class="jumbotron">
+                        <h1>Search Field!</h1>
+                        <p class="lead">Here Search for the fields that are hard to tag.</p>
+                        <hr class="my-4">
+
+                        <div class="row container-fluid" style="width: 100%;">
+                            <input style="width: 80%;" class="col-8" type="text" name="search_txt0" id="search_txt0">
+                            <input type="button" class="btn btn-primary btn-md col-3 offset-1" style="width: 20%;" value="Search" onclick="search()">
+                        </div>
+
+                        <div class="row container-fluid" style="width: 100%;margin-top: 10%;">
+                                <select  style="width: 40%;" class="btn btn-secondary dropdown-toggle col-5" id="search_txt1">
+                                    <option>Baseword</option>
+                                    <option>Enclitic</option>
+                                    <option>Proclitic</option>
+                                </select>
+                                <select style="width: 40%;" class="btn btn-secondary dropdown-toggle col-6 offset-1" id="search_txt2">
+                                    <option>Approximate</option>
+                                    <option>Exact</option>
+                                </select>
+                        </div>
+                        <div class="row width: 100%">
+                            <div class="col-12">
+                                <p class="my-2" id="search_value" style="width: 100%;word-break: break-all"></p>
+                            </div>
+                        </div>
+                      </div>
+                </div>
+        
+                <!-- Content -->
+                <div class="col-6" style="border-width: 2px;border-color: blue;">
+        
+                    <div class="row">
+                        <div class="col-12" style="width: 100%;">
+                            <input type="text" dir="rtl" name="raw" id="raw_txt" value="" style="width: 100%;font-size: 200%;margin-top: 5%;" onclick="GetSelection()" onkeypress="return false">
+                            <input type="text" dir="rtl" name="fixed_raw" id="fixed_raw_txt" value="" style="width: 100%;font-size: 200%;display: none; margin-top: 5%">
+                        </div>
+                    </div>
+                    <div class="row"></div>
+                    <div class="row" style="width: 100%;">
+                        <input type="button" id="fix_sentence" class="col-6 offset-3 btn btn-primary" value="Fix Phrase" style="margin-top: 5%;" onclick="fixPhrase()">
+                        <div class="col-3"></div>
+                    </div>
+                
+                    <div class="row" style="width: 100%;">
+                        <div id="newStr">
+
+                        </div>
+    
+                    </div>
+
+                    </br>
+
+                    <div class="row">
+                        <div id="newStrTags" style="margin: 5%;"></div>
+                    </div>
+
+                    <div class="row">
+                        <input type="button" class="btn btn-primary col-3" value="Reset All" onclick="reset()">
+                        <input type="button" class="btn btn-primary col-3 offset-1" value="Reset State" onclick="resetState()">
+                        <input type="button" class="btn btn-primary col-3 offset-1" value="Save and Next" onclick="nextPhrase()">   
+                    </div>
+     
+                </div>
+        
+                <!-- List of Phrases -->
+                <div class="col-3 container-fluid">
+                    <div class="jumbotron">
+                        <h1>List of Phrases!</h1>
+                        <p class="lead">Here Are the phrases for the annotation.</p>
+                        <div class="row float-right">
+                            {% if filtered%}
+                                <input class="btn btn-primary" type="button" id="filter_btn" value="Normal" onclick="toggleFilter()">
+                            {% else %}
+                                <input class="btn btn-primary" type="button" id="filter_btn" value="Flagged" onclick="toggleFilter()">
+                            {% endif %}
+                        </div>
+                        </br>
+                        <hr class="my-4">
+
+                        <div class="row container-fluid" style="width: 100%;">
+                            <ul class=”list-group list-group-flush”>
+                                {% for text in phrases%}
+                                    <p dir="rtl" lang="ar" style="width: 100%;text-align: right;font-size: 150%;" onclick="SetText(this)">{{text}}</p>
+                                    <hr class="my-2">
+                                {% endfor %}
+                                </ul>
+                        </div>
+                      </div>
+                </div>
+            </div>
+    </div>
+
+    
+
+    <script type="text/javascript">
+        var startStr = 0
+        var state = "denoise"
+        var phrasesArray = {{phrases|safe}}
+
+        var tags_txt = []
+        var raw_txt = []
+        var denoised_txt = []
+        var tags = []
+
+        var segment = []
+        var wazns = []
+        var poses = []
+        var lemmas = []
+        var flags = []
+        var delimiters = []
+        var aspects = []
+
+        var original_txt = ""
+        var fixed_phrase = ""
+        var loaded_raw = ""
+
+        var beginTags = false
+
+        for(var i=0;i<phrasesArray.length;i++){
+            phrasesArray[i] = phrasesArray[i].replace("\n","")
+        }
+
+        function fixPhrase(){
+            if(document.getElementById("fix_sentence").value == "Validate Fix"){
+                document.getElementById("raw_txt").value = document.getElementById("fixed_raw_txt").value
+                document.getElementById("fixed_raw_txt").style.display = "none"
+                document.getElementById("raw_txt").disabled = false
+                fixed_phrase = document.getElementById("fixed_raw_txt").value
+            }
+            else
+            {
+                var str = document.getElementById("raw_txt").value 
+                var var_raw_txt = document.getElementById("raw_txt")
+                var var_fixed_raw_txt = document.getElementById("fixed_raw_txt")
+
+                var_fixed_raw_txt.value = str
+                var_raw_txt.disabled = true
+                var_fixed_raw_txt.style.display = "inline-block"
+             
+                document.getElementById("fix_sentence").value = "Validate Fix"
+            }
+        }
+
+        function toggleFilter(){
+            var filter_btn = document.getElementById("filter_btn")
+            if(filter_btn.value == "Flagged"){
+                filter_btn.value = "Normal"
+                // Load with Filters
+                window.location.href = "/filteredRes";
+            }
+            else if(filter_btn.value == "Normal"){
+                filter_btn.value = "Flagged"
+                // Load without filters
+                window.location.href = "/";
+            }
+        }
+
+        function search(){
+            var search_txt0 = document.getElementById("search_txt0").value
+            var search_txt1 = document.getElementById("search_txt1").value
+            var search_txt2 = document.getElementById("search_txt2").value
+
+            console.log(search_txt0)
+            console.log(search_txt1)
+            console.log(search_txt2)
+
+            var jsontoSend = {
+                search_txt0: search_txt0,
+                search_txt1: search_txt1,
+                search_txt2: search_txt2
+            }
+
+            var toSend = JSON.stringify(jsontoSend)
+            fetch(`/getSearch/${toSend}`)
+                .then(function (response) {
+                    return response.text();
+                }).then(function (text) {
+                    console.log('GET response text:');
+                    // console.log(text); 
+                    var search_res = JSON.parse(text)
+                    parseSearch(search_res)
+                    console.log(search_res);
+                });
+        }
+
+        function parseSearch(obj){
+            var json = JSON.stringify(obj);
+            // console.log(json)
+            document.getElementById("search_value").innerHTML = json
+        //     for (var key in obj) {
+        //         if (obj.hasOwnProperty(key)) {
+        //             console.log(key);
+        // //         for (k in key){
+        // //             if (key.hasOwnProperty(k)) {
+        // //                 console.log(k)
+        // //                 for (kp in k)
+        // //                     if (k.hasOwnProperty(kp)) {
+        // //                         console.log(kp)
+        // //                 }
+        // //         }
+        // //     }}         
+        // // }
+    }
+
+        function loadPrevious(obj){
+            fetch(`/getPreviousAnnotations/${obj}`)
+                .then(function (response) {
+                    return response.text();
+                }).then(function (text) {
+                    console.log('GET response text:');
+                    generatePreviousAnnotations(text)
+                });
+        }
+
+        function checkIfAnnotated(obj){
+            var vall = ""
+            fetch(`/getAnnotationStatus/${obj}`)
+                .then(function (response) {
+                    return response.text();
+                }).then(function (text) {
+                    console.log('GET response text:');
+                    if(text == "annotated"){
+                        loadPrevious(obj)
+                    }
+                });            
+        }
+
+        function GetSelection() {
+            if(state == "denoise"){
+                GetSelectionDenoise()
+            }
+            else{
+                if(beginTags == true){
+                    GetSelectionAddTag()
+                    beginTags = false
+                }
+                else{
+                    GetSelectionAddTag()
+                }
+            }
+        }
+
+        function GetSelectionDenoise() {
+            var delim = document.getElementById("raw_txt").selectionStart
+            var str = document.getElementById("raw_txt").value 
+            var newStr = str.substring(startStr,delim)
+            raw_txt.push(newStr.trim())
+            delimiters.push(delim)
+            if(str[delim]==" "){
+                delimiters.push(delim+1)
+            }
+            if(str[delim-1]==" "){
+                delimiters.push(delim-1)
+            }
+            document.getElementById("newStr").innerHTML += "<input dir=\"rtl\" type=\"text\" value=\""+newStr+"\" style=\"font-size: 150%;\">"
+            document.getElementById("newStr").innerHTML += "</br>"
+            if (delim==str.length){
+                startStr = 0
+                state = "tags"
+                beginTags = true
+                return
+            }
+            startStr = delim
+            console.log(delimiters)
+        }
+
+        function GetSelectionAddTag() {
+            var delim = document.getElementById("raw_txt").selectionStart
+            var str = document.getElementById("raw_txt").value 
+            var newStr = str.substring(startStr,delim)
+            tags.push(newStr.trim())
+            if(delimiters.includes(delim)){
+                tags_txt.push(tags)
+                tags = []
+            }
+            
+            var pos = 
+                '<select name="pos" class="pos" id="pos">'+
+                    '<option value="NONE" selected>NONE</option>'
+
+            var pos_vals = ["ABBREV","ADJ","ADJ_COMP","ADJ_NUM","ADV","ADV_INTERROG","ADV_REL","CONJ","CONJ_SUB","DIGIT","FORIEGN","INTERJ","NOUN","NOUN_NUM","NOUN_PROP","NOUN_QUANT","PART","PART_CONNECT","PART_DET","PART_EMPHATIC","PART_FOCUS","PART_FUT","PART_INTERROG","PART_NEG","PART_PROG","PART_RC","PART_RESTRICT","PART_VERB","PART_VOC","PREP","PRON","PRON_DEM","PRON_EXCLAM","PRON_INTERROG","PRON_REL","PUNC","VERB","VERB_NOM","VERB_PSEUDO"]
+            pos_vals.forEach(p => {
+                pos += '<option value="'+p+'">'+p+'</option>'
+            });
+            pos += "</select>"
+
+            var aspect = 
+            '<select name="aspect" class="aspect" id="aspect">'+
+                    '<option value="NONE" selected>NONE</option>'
+
+            var aspecT_vals = ["P","I","C"]
+            aspecT_vals.forEach(a => {
+                aspect += '<option value="'+a+'">'+a+'</option>'
+            });
+            aspect += "</select>"
+
+
+            var wazn = 
+            '<select name="wazn" class="wazn" id="wazn">'+
+                '<option value="w1">w1</option>'+
+                '<option value="w2">w2</option>'+
+                '<option value="w3">w3</option>'+
+                '<option value="w4">w4</option>'+
+            '</select>'
+
+
+            var lemma = 
+                '<select name="lemma" class="lemma" id="lemma">'+
+                    '<option value="l1">l1</option>'+
+                    '<option value="l2">l2</option>'+
+                    '<option value="l3" selected>l3</option>'+
+                    '<option value="l4">l4</option>'+
+                '</select>'
+
+            var flag_Btn = '<button class="n_flag" value="'+newStr+'" onclick="TagSegment(this)">Flag Segment</button>'
+
+            document.getElementById("newStrTags").innerHTML += "<input dir=\"rtl\" class=\"inpt\" type=\"text\" value=\""+newStr+"\" style=\"font-size: 150%;\">"
+            document.getElementById("newStrTags").innerHTML += wazn
+            document.getElementById("newStrTags").innerHTML += pos
+            document.getElementById("newStrTags").innerHTML += lemma
+            document.getElementById("newStrTags").innerHTML += flag_Btn
+            document.getElementById("newStrTags").innerHTML += aspect
+            document.getElementById("newStrTags").innerHTML += "</br>"
+            if (delim==str.length){
+                console.log("TAGS : ",tags_txt)
+            }
+            startStr = delim
+        }
+
+        function saveCoda() {
+            denoised_txt = []
+            $('#newStr').find('input').each(function(){
+                denoised_txt.push($(this).val().trim());
+            });
+            state = "tags"
+
+            console.log("RAW : ",raw_txt)
+            console.log("CODA : ",denoised_txt)
+        }
+
+        function SaveTags() {
+            segment = []
+            wazns = []
+            poss = []
+            lemmas = []
+            flags = []
+            aspects = []
+
+            $('#newStrTags').find('.inpt').each(function(){
+                segment.push($(this).val().trim())
+            });
+            $('#newStrTags').find('.wazn').each(function(){
+                wazns.push($(this).val())
+            });
+            $('#newStrTags').find('.pos').each(function(){
+                poss.push($(this).val())
+            });
+            $('#newStrTags').find('.lemma').each(function(){
+                lemmas.push($(this).val())
+            });
+            $('#newStrTags').find('.aspect').each(function(){
+                aspects.push($(this).val())
+            });
+            $('#newStrTags').find("button").each(function(){
+                flags.push($(this).attr("class"))
+            })
+
+            console.log(flags)
+
+            state = "denoise"
+            startStr = 0
+        }
+
+        function SetText(obj) {
+            reset()
+            var t = $(obj).text();
+            original_txt = t.replace("\n","")
+            console.log("From Set Text Original : "+original_txt)
+            document.getElementById("raw_txt").value = t
+            checkIfAnnotated(t)
+        }
+
+        function TagSegment(obj){
+            if($(obj).attr("class") == "n_flag"){
+                $(obj).text("UnFlag")
+                $(obj).attr('class', 'flag')
+            }
+            else{
+                $(obj).text("Flag Segment")
+                $(obj).attr('class', 'n_flag')
+            }
+        }
+
+        function reset(){
+            document.getElementById("newStr").innerHTML = ""
+            document.getElementById("newStrTags").innerHTML = ""
+            tags_txt = []
+            raw_txt = []
+            denoised_txt = []
+            tags = []
+
+            segment = []
+            wazns = []
+            poses = []
+            lemmas = []
+
+            delimiters = []
+            state = "denoise"
+            startStr = 0
+            loaded_raw = ""
+            original_txt = ""
+            fixed_phrase = ""
+            beginTags = false
+        }
+
+        function resetState(){
+            if(state == "denoise"){
+                reset()
+            }
+            else{
+                document.getElementById("newStrTags").innerHTML = ""
+                tags_txt = []
+                tags = []
+                segment = []
+                wazns = []
+                poses = []
+                lemmas = []
+                startStr = 0
+                beginTags = true
+            }
+        }
+
+        function generatePreviousAnnotations(text){
+            delimiters = []
+            var annotaions = JSON.parse(text)
+            console.log(annotaions)
+            var coda = annotaions["coda"]
+            var segments = annotaions["segments"]
+            var delims = annotaions["delimiters"]
+            var fixed_phrs = annotaions["fixed"]
+            var original_phrs = annotaions["original"]
+
+            if(fixed_phrs != ""){
+                document.getElementById("raw_txt").value = fixed_phrs
+                original_txt = original_phrs
+                fixed_phrase = fixed_phrs
+            }
+            else{
+                document.getElementById("raw_txt").value = original_phrs
+                original_txt = original_phrs
+            }
+
+            if(coda.length != 0){
+                state = "tags"
+                beginTags = true
+                delimiters = delims
+            }
+            else{
+                state = "denoise"
+            }
+
+            coda.forEach(c => {
+                document.getElementById("newStr").innerHTML += "<input class=\"row\" dir=\"rtl\" type=\"text\" value=\""+c+"\" style=\"font-size: 150%\">"
+                document.getElementById("newStr").innerHTML += "</br>"
+            });
+
+            if(segments.length != 0){
+            segments.forEach(s => {
+                s.forEach(ss => {
+                    tags.push(ss["text"])
+                })
+                tags_txt.push(tags)
+                tags = []
+            })
+
+            var ws = []
+
+                segments.forEach(s => {
+                    s.forEach(ss => { 
+                        var wazn = 
+                            '<select name="wazn" class="wazn" id="wazn" value="w4">'+
+                                '<option value="w1">w1</option>'+
+                                '<option value="w2">w2</option>'+
+                                '<option value="w3">w3</option>'+
+                                '<option value="w4">w4</option>'+
+                            '</select>'
+
+                        var pos = 
+                        '<div style="float:left">'+
+                        '<label>POS:</label>'+
+                        '<select name="pos" class="pos" id="pos">'+
+                            '<option value="NONE" selected>NONE</option>'
+
+                        var pos_vals = ["ABBREV","ADJ","ADJ_COMP","ADJ_NUM","ADV","ADV_INTERROG","ADV_REL","CONJ","CONJ_SUB","DIGIT","FORIEGN","INTERJ","NOUN","NOUN_NUM","NOUN_PROP","NOUN_QUANT","PART","PART_CONNECT","PART_DET","PART_EMPHATIC","PART_FOCUS","PART_FUT","PART_INTERROG","PART_NEG","PART_PROG","PART_RC","PART_RESTRICT","PART_VERB","PART_VOC","PREP","PRON","PRON_DEM","PRON_EXCLAM","PRON_INTERROG","PRON_REL","PUNC","VERB","VERB_NOM","VERB_PSEUDO"]
+                        pos_vals.forEach(p => {
+                            pos += '<option value="'+p+'">'+p+'</option>'
+                            });
+                        pos += "</select></div>"
+
+                        var lemma = 
+                            '<select name="lemma" class="lemma" id="lemma">'+
+                                '<option value="l1">l1</option>'+
+                                '<option value="l2">l2</option>'+
+                                '<option value="l3">l3</option>'+
+                                '<option value="l4">l4</option>'+
+                            '</select>'
+                        
+                        var flag_Btn = ""
+                        if(ss["flag"] == "n_flag"){
+                            flag_Btn = '<button class="'+ss["flag"]+'" value="'+ss["text"]+'" onclick="TagSegment(this)">Flag Segment</button>'
+                        }
+                        else{
+                            flag_Btn = '<button class="'+ss["flag"]+'" value="'+ss["text"]+'" onclick="TagSegment(this)">Unflag</button>'
+                        }
+
+                        document.getElementById("newStrTags").innerHTML += "<input dir=\"rtl\" class=\"inpt\" type=\"text\" value=\""+ss["text"]+"\" style=\"font-size: 150%;\">"
+                        document.getElementById("newStrTags").innerHTML += wazn
+                        document.getElementById("newStrTags").innerHTML += pos
+                        document.getElementById("newStrTags").innerHTML += lemma
+                        document.getElementById("newStrTags").innerHTML += flag_Btn
+                        document.getElementById("newStrTags").innerHTML += "</br>"
+                        ws.push(ss["wazn"])
+                        ws.push(ss["pos"])
+                        ws.push(ss["lemma"])
+                        // ws.push(ss["flag"])
+                    })
+                })
+
+                var options = document.getElementById("newStrTags").getElementsByTagName("select")
+
+                for(var x = 0; x < options.length; x++){
+                    options[x].value = ws[x]
+                }
+            }
+        }
+
+        function findPhraseIndex(){
+            // get raw text
+            // rtxt = document.getElementById("raw_txt").value
+            // search for it in the array from the back end
+            // get index of the phrase in the array
+            console.log("Original from Find Next : "+original_txt)
+            var phraseIndex = phrasesArray.indexOf(original_txt)
+            //returns index
+            return phraseIndex
+        }
+
+        function nextPhrase() {
+            SaveTags()
+            saveCoda()
+            //Get Current Index
+            var phraseIndex = findPhraseIndex()
+
+            // Change raw_txt input to the next phrase
+            if(phraseIndex > phrasesArray.length){
+                alert("Last Phrase")
+            }
+            else{
+                document.getElementById("raw_txt").value = phrasesArray[phraseIndex+1]
+                checkIfAnnotated(phrasesArray[phraseIndex+1])
+
+            var segmentations = [
+
+            ]
+
+            for(var i = 0;i<tags_txt.length;i++){
+                var segs = []
+                for(var j = 0; j<tags_txt[i].length;j++){
+                    var indxx = segment.indexOf(tags_txt[i][j])
+                    var obj = {
+                        "text": segment[indxx],
+                        "wazn": wazns[indxx],
+                        "pos": poss[indxx],
+                        "lemma": lemmas[indxx],
+                        "flag": flags[indxx],
+                        "aspect": aspects[indxx]
+                    }
+                    segs.push(obj)
+                }
+                segmentations.push(segs)
+            }
+
+            var jsontoSend = {
+                original: original_txt,
+                delimiters: delimiters,
+                fixed: fixed_phrase,
+                raw: raw_txt,
+                coda: denoised_txt,
+                segments: segmentations  
+            }
+
+            reset()
+
+            console.log(jsontoSend)
+
+            var toSend = JSON.stringify(jsontoSend)
+            fetch(`/getdata/${toSend}`)
+                .then(function (response) {
+                    return response.text();
+                }).then(function (text) {
+                    console.log('GET response text:');
+                    console.log(text); 
+                });
+        }
+    }
+    </script>
+</body>
+</html>
