@@ -8,63 +8,81 @@ import json
 from git import Repo, RemoteReference
 
 POS = str
-ExampleField = str # ['baseword', 'gloss', 'clitic']
+ExampleFieldGulf = str # ['baseword', 'gloss', 'clitic', 'context']
+ExampleFieldCODA = str  # ['raw', 'context']
+ExampleFieldMSA = str # ['segment', 'gloss', 'context']
 SegmentType = str # ['baseword', 'enclitic', 'proclitic']
-Example = Dict[ExampleField, str]
-ExamplesQueryFilter = namedtuple('ExamplesQueryFilter', 'segment_type match')
+ExampleGulf = Dict[ExampleFieldGulf, str]
+ExampleCODA = Dict[ExampleFieldCODA, str]
+ExampleMSA = Dict[ExampleFieldMSA, str]
+ExamplesQueryFilter = namedtuple('ExamplesQueryFilter', 'segment_type match_type resource')
 
 ARABIC_LETTERS = "ءؤئابتثجحخدذرزسشصضطظعغفقكلمنهوىي"
 
 def search_bar_examples(query: str,
-                        examples_json: Dict[SegmentType, Dict[POS, List[Example]]],
-                        query_filter: Tuple[str] = ('Baseword', 'Approximate')
-                        ) -> Dict[POS, List[Example]]:
+                        gulf_tag_examples: Dict[SegmentType, Dict[POS, List[ExampleGulf]]],
+                        coda_examples: List[Tuple[str]],
+                        query_filter: Tuple[str] = ('Baseword', 'Approximate', 'Gulf Tags')
+                        ) -> Union[Dict[POS, List[ExampleGulf]], List[ExampleCODA], Dict[POS, List[ExampleMSA]]]:
     """Function which allows to search for specific examples in a static JSON file using a filter.
     For the query filter:
         - In index 0, possible choices are 'Baseword', 'Enclitic', 'Proclitic'.
         - In index 1, possible choices are 'Approximate', 'Exact' (whether the match should be exact or not).
+        - In index 2, possible choices are 'Gulf Tags', 'MSA Tags', 'CODA Examples'.
 
     Args:
         query (str): what the user will type in the search bar.
-        examples_json (Dict[SegmentType, Dict[POS, List[Dict[ExampleField, str]]]]): already parsed static JSON object sitting in memory
-        query_filter (Optional[List[str]], optional): Should be drop down menus where the user specifies what he is searching for. Defaults to ['Baseword', 'Approximate'].
+        gulf_tag_examples (Dict[SegmentType, Dict[POS, List[Dict[ExampleField, str]]]]): already parsed static JSON object sitting in memory
+        query_filter (Optional[List[str]], optional): Should be drop down menus where the user specifies what he is searching for. Defaults to ('Baseword', 'Approximate', 'Gulf Tags').
 
     Returns:
-        Dict[POS, List[Example]]: Dictionary with POS tags as keys and a list of examples to display as values.
+        Union[Dict[POS, List[Union[ExampleGulf, ExampleMSA]]], List[ExampleCODA]]: Dictionary with a structure which depends on the value chosen for the resource type (index 2) in the query filter
     """
     query_filter = ExamplesQueryFilter(*query_filter)
+    
+    if 'Tags' in query_filter.resource:
+        response: Dict[POS, List[Union[ExampleGulf, ExampleMSA]]] = {}
 
-    is_pos = True if query.translate(
-        str.maketrans('', '', punc)).isupper() else False
-    is_arabic_str = True if query[0] in ARABIC_LETTERS else False
-    is_gloss = True if [True for char in query if char.islower(
-    ) and char not in ARABIC_LETTERS] else False
+        is_pos = True if query.translate(
+            str.maketrans('', '', punc)).isupper() else False
+        is_arabic_str = True if query[0] in ARABIC_LETTERS else False
+        is_gloss = True if [True for char in query if char.islower(
+        ) and char not in ARABIC_LETTERS] else False
 
-    examples_json: Dict[POS, List[Example]] = examples_json[query_filter.segment_type.lower()]
+        gulf_tag_examples: Dict[POS, List[ExampleGulf]] = gulf_tag_examples[query_filter.segment_type.lower()]
 
-    response: Dict[POS, List[Example]] = {}
-    if is_pos:
-        for k, v in examples_json.items():
-            if query_filter.match.lower() == 'approximate':
-                if query in k:
-                    response[k] = v
-            elif query_filter.match.lower() == 'exact':
-                if query == k:
-                    response[k] = v
+        if is_pos:
+            for k, v in gulf_tag_examples.items():
+                if query_filter.match_type == 'Approximate':
+                    if query in k:
+                        response[k] = v
+                elif query_filter.match_type == 'Exact':
+                    if query == k:
+                        response[k] = v
 
-    elif is_arabic_str or is_gloss:
-        example_key = 'baseword' if query_filter.segment_type.lower() == 'baseword' else 'clitic'
-        example_key = 'gloss' if is_gloss else example_key
-        for k, v in examples_json.items():
-            v_: List[Example] = []
-            for example in v:
-                if query_filter.match.lower() == 'approximate':
-                    if query in example[example_key]:
-                        v_.append(example)
-                elif query_filter.match.lower() == 'exact':
-                    if query == example[example_key]:
-                        v_.append(example)
-            response.setdefault(k, []).append(v_)
+        elif is_arabic_str or is_gloss:
+            example_key = 'baseword' if query_filter.segment_type.lower() == 'baseword' else 'clitic'
+            example_key = 'gloss' if is_gloss else example_key
+            for k, v in gulf_tag_examples.items():
+                v_: List[ExampleGulf] = []
+                for example in v:
+                    if query_filter.match_type == 'Approximate':
+                        if query in example[example_key]:
+                            v_.append(example)
+                    elif query_filter.match_type == 'Exact':
+                        if query == example[example_key]:
+                            v_.append(example)
+                response.setdefault(k, []).append(v_)
+    
+    elif query_filter.resource == 'CODA Examples':
+        response: List[ExampleCODA] = []
+        for example in coda_examples:
+            if query_filter.match_type == 'Approximate':
+                if query in example['raw'] or query in example['coda']:
+                    response.append(example)
+            elif query_filter.match_type == 'Exact':
+                if query == example['raw'] or query == example['coda']:
+                    response.append(example)
     
     return response
 
@@ -139,10 +157,10 @@ def search_bar_previous_annotations(query: str,
 
 COMMIT_MESSAGE = 'No message'
 
-def clone_repo(repo_dir='/Users/spexal/Documents/annotation_software/annotation_repo',
+def clone_repo(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
                username='christios',
                password='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',
-               repo_name='lebanese-arabic-corpus',
+               repo_name='annotation',
                annotator_name='Wiaam') -> None:
     """This method is called once, when the annotator sets up their local application.
     What it does:
@@ -212,17 +230,21 @@ def get_merged_json(repo_dir='/Users/chriscay/thesis/annotation',
     return annotations_json
 
 
-with open('./pos_examples.json') as f:
-    examples_json = json.load(f)
+# with open('/Users/chriscay/thesis/pos_examples.json') as f:
+#     gulf_tag_examples = json.load(f)
+
+# with open('/Users/chriscay/thesis/coda_examples.json') as f:
+#     coda_examples = json.load(f)
 
 # with open('/Users/chriscay/Library/Containers/com.apple.mail/Data/Library/Mail Downloads/6A3F79B7-E791-498F-87DD-A0238023A21E/data.json') as f:
 #     annotations_json = json.load(f)
 
 # search_bar_previous_annotations('p1', annotations_json, ('Segments', 'POS', 'Approximate', 'Christian'))
-search_bar_examples('PREP', examples_json, ('Enclitic', 'Approximate'))
+# search_bar_examples('ليش', gulf_tag_examples, coda_examples, ('Enclitic', 'Approximate', 'CODA Examples'))
 
 
-# clone_repo()
+# clone_repo(repo_dir='/Users/chriscay/thesis/annotation_carine',
+#            annotator_name='Carine')
 # sync_annotations(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
 #                     annotator_name='Wiaam')
 # get_merged_json(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
