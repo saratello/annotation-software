@@ -144,11 +144,20 @@ def get_search(data):
     else: # GET request
         new_data = json.loads(data)
         print(new_data)
-        json_response = search_bar_examples(new_data["search_txt0"], examples_json, (new_data["search_txt1"], new_data["search_txt2"]))
-        return json_response
+        json_response = search_bar_examples(new_data["search_txt0"], gulf_tag_examples, msa_tag_examples, coda_examples, (new_data["search_txt1"], new_data["search_txt2"], new_data["search_txt3"]))
+        print(json_response)
+        if(new_data["search_txt3"] == "CODA Examples"):
+            return json.dumps(json_response)
+        else:
+            return json_response
 
     print(json_response)
 
-with open('./pos_examples.json') as f:
-    examples_json = json.load(f)
+with open('./examples/gulf_tag_examples.json') as f_gulf, \
+        open('./examples/coda_examples.json') as f_coda, \
+        open('./examples/msa_tag_examples.json') as f_msa:
+    gulf_tag_examples = json.load(f_gulf)
+    coda_examples = json.load(f_coda)
+    msa_tag_examples = json.load(f_msa)
+
 app.run(host='0.0.0.0')

@@ -35,19 +35,26 @@
                         </div>
 
                         <div class="row container-fluid" style="width: 100%;margin-top: 10%;">
-                                <select  style="width: 40%;" class="btn btn-secondary dropdown-toggle col-5" id="search_txt1">
+                                <select  style="width: 30%;" class="btn btn-secondary dropdown-toggle col-3" id="search_txt1">
                                     <option>Baseword</option>
                                     <option>Enclitic</option>
                                     <option>Proclitic</option>
                                 </select>
-                                <select style="width: 40%;" class="btn btn-secondary dropdown-toggle col-6 offset-1" id="search_txt2">
+                                <select style="width: 30%;" class="btn btn-secondary dropdown-toggle col-3 offset-1" id="search_txt2">
                                     <option>Approximate</option>
                                     <option>Exact</option>
+                                </select>
+                                <select style="width: 30%;" class="btn btn-secondary dropdown-toggle col-3 offset-1" id="search_txt3">
+                                    <option>Gulf Tags</option>
+                                    <option>MSA Tags</option>
+                                    <option>CODA Examples</option>
                                 </select>
                         </div>
                         <div class="row width: 100%">
                             <div class="col-12">
-                                <p class="my-2" id="search_value" style="width: 100%;word-break: break-all"></p>
+                                <div class="my-2" id="search_value" style="width: 100%;word-break: break-all">
+                                
+                                </div>
                             </div>
                         </div>
                       </div>
@@ -112,6 +119,11 @@
                                 {% endfor %}
                                 </ul>
                         </div>
+
+                        <div>
+                            
+                        </div>
+
                       </div>
                 </div>
             </div>
@@ -130,18 +142,36 @@
         var tags = []
 
         var segment = []
-        var wazns = []
+
         var poses = []
-        var lemmas = []
-        var flags = []
-        var delimiters = []
         var aspects = []
+        var persons = []
+        var genders = []
+        var numbers = []
+        var states = []
+        var voices = []
+        var moods = []
+        var flags = []
+
+        var delimiters = []
 
         var original_txt = ""
         var fixed_phrase = ""
         var loaded_raw = ""
 
         var beginTags = false
+
+        var searchObj = ""
+        // Tags
+
+        var pos_vals = ["ABBREV","ADJ","ADJ_COMP","ADJ_NUM","ADV","ADV_INTERROG","ADV_REL","CONJ","CONJ_SUB","DIGIT","FORIEGN","INTERJ","NOUN","NOUN_NUM","NOUN_PROP","NOUN_QUANT","PART","PART_CONNECT","PART_DET","PART_EMPHATIC","PART_FOCUS","PART_FUT","PART_INTERROG","PART_NEG","PART_PROG","PART_RC","PART_RESTRICT","PART_VERB","PART_VOC","PREP","PRON","PRON_DEM","PRON_EXCLAM","PRON_INTERROG","PRON_REL","PUNC","VERB","VERB_NOM","VERB_PSEUDO"]
+        var aspecT_vals = ["P","I","C"]
+        var person_vals = ["1","2","3"]
+        var gender_vals = ["M", "F"]
+        var number_vals = ["1", "2", "3"]
+        var state_vals = ["D", "I", "C"]
+        var voice_vals = ["A", "P"]
+        var mood_vals = ["S", "I", "J"]
 
         for(var i=0;i<phrasesArray.length;i++){
             phrasesArray[i] = phrasesArray[i].replace("\n","")
@@ -186,15 +216,13 @@
             var search_txt0 = document.getElementById("search_txt0").value
             var search_txt1 = document.getElementById("search_txt1").value
             var search_txt2 = document.getElementById("search_txt2").value
-
-            console.log(search_txt0)
-            console.log(search_txt1)
-            console.log(search_txt2)
+            var search_txt3 = document.getElementById("search_txt3").value
 
             var jsontoSend = {
                 search_txt0: search_txt0,
                 search_txt1: search_txt1,
-                search_txt2: search_txt2
+                search_txt2: search_txt2,
+                search_txt3: search_txt3
             }
 
             var toSend = JSON.stringify(jsontoSend)
@@ -206,27 +234,55 @@
                     // console.log(text); 
                     var search_res = JSON.parse(text)
                     parseSearch(search_res)
-                    console.log(search_res);
+                    // console.log(search_res);
                 });
+            
+                document.getElementById("search_value").innerHTML = ""
         }
 
         function parseSearch(obj){
-            var json = JSON.stringify(obj);
+            searchObj = obj
+            // console.log(obj)
+            // var json = JSON.stringify(obj);
             // console.log(json)
-            document.getElementById("search_value").innerHTML = json
-        //     for (var key in obj) {
-        //         if (obj.hasOwnProperty(key)) {
-        //             console.log(key);
-        // //         for (k in key){
-        // //             if (key.hasOwnProperty(k)) {
-        // //                 console.log(k)
-        // //                 for (kp in k)
-        // //                     if (k.hasOwnProperty(kp)) {
-        // //                         console.log(kp)
-        // //                 }
-        // //         }
-        // //     }}         
-        // // }
+
+            // Parent HTML
+            var searchField = document.getElementById("search_value")
+
+            if(document.getElementById("search_txt3").value == "CODA Examples"){
+                Object.keys(obj).forEach(pos_key => {
+                    var posKey = obj[pos_key]
+                    Object.keys(posKey).forEach(example => {
+                        searchField.innerHTML += '<li>'+example+' : '+ posKey[example]+'</li>'
+                        // console.log(example+" : "+posKey[example])
+                    })
+                    searchField.innerHTML += '<hr class="my-4">'
+                })
+            }
+            else{
+                Object.keys(obj).forEach(pos_key => {
+                // Div inside of it H1 Key BR
+                searchField.innerHTML += '<p value="'+pos_key+'" onclick="parsePOS(this)">'+pos_key+'</p><hr class="my-4">'
+                var posKey = obj[pos_key] 
+                })
+            }
+    }
+
+    function parsePOS(posObj){
+        console.log(searchObj[$(posObj).text()])
+        var searchField = document.getElementById("search_value")
+        var posKey = searchObj[$(posObj).text()]
+        searchField.innerHTML = '<div><p>'+$(posObj).text()+'</p>'
+            Object.keys(posKey).forEach(example => {
+                    var example = posKey[example]
+                    console.log(example.length)
+                    Object.keys(example).forEach(field => {
+                        // console.log(field+" : "+example[field])
+                        searchField.innerHTML += '<li>'+field+' : '+example[field]+'</li>'
+                    })
+                    searchField.innerHTML += '<hr class="my-4">'
+                })
+        searchField.innerHTML += '</div>'
     }
 
         function loadPrevious(obj){
@@ -305,48 +361,93 @@
                 '<select name="pos" class="pos" id="pos">'+
                     '<option value="NONE" selected>NONE</option>'
 
-            var pos_vals = ["ABBREV","ADJ","ADJ_COMP","ADJ_NUM","ADV","ADV_INTERROG","ADV_REL","CONJ","CONJ_SUB","DIGIT","FORIEGN","INTERJ","NOUN","NOUN_NUM","NOUN_PROP","NOUN_QUANT","PART","PART_CONNECT","PART_DET","PART_EMPHATIC","PART_FOCUS","PART_FUT","PART_INTERROG","PART_NEG","PART_PROG","PART_RC","PART_RESTRICT","PART_VERB","PART_VOC","PREP","PRON","PRON_DEM","PRON_EXCLAM","PRON_INTERROG","PRON_REL","PUNC","VERB","VERB_NOM","VERB_PSEUDO"]
             pos_vals.forEach(p => {
                 pos += '<option value="'+p+'">'+p+'</option>'
             });
             pos += "</select>"
 
+
             var aspect = 
             '<select name="aspect" class="aspect" id="aspect">'+
                     '<option value="NONE" selected>NONE</option>'
 
-            var aspecT_vals = ["P","I","C"]
             aspecT_vals.forEach(a => {
                 aspect += '<option value="'+a+'">'+a+'</option>'
             });
             aspect += "</select>"
 
 
-            var wazn = 
-            '<select name="wazn" class="wazn" id="wazn">'+
-                '<option value="w1">w1</option>'+
-                '<option value="w2">w2</option>'+
-                '<option value="w3">w3</option>'+
-                '<option value="w4">w4</option>'+
-            '</select>'
+            var person = 
+            '<select name="person" class="person" id="person">'+
+                    '<option value="NONE" selected>NONE</option>'
+
+            person_vals.forEach(a => {
+                person += '<option value="'+a+'">'+a+'</option>'
+            });
+            person += "</select>"
 
 
-            var lemma = 
-                '<select name="lemma" class="lemma" id="lemma">'+
-                    '<option value="l1">l1</option>'+
-                    '<option value="l2">l2</option>'+
-                    '<option value="l3" selected>l3</option>'+
-                    '<option value="l4">l4</option>'+
-                '</select>'
+            var gender = 
+            '<select name="gender" class="gender" id="gender">'+
+                    '<option value="NONE" selected>NONE</option>'
+
+            gender_vals.forEach(a => {
+                gender += '<option value="'+a+'">'+a+'</option>'
+            });
+            gender += "</select>"
+
+
+            var number = 
+            '<select name="number" class="number" id="number">'+
+                    '<option value="NONE" selected>NONE</option>'
+
+            number_vals.forEach(a => {
+                number += '<option value="'+a+'">'+a+'</option>'
+            });
+            number += "</select>"
+
+
+            var state = 
+            '<select name="state" class="state" id="state">'+
+                    '<option value="NONE" selected>NONE</option>'
+
+            state_vals.forEach(a => {
+                state += '<option value="'+a+'">'+a+'</option>'
+            });
+            state += "</select>"
+            
+
+            var voice = 
+            '<select name="voice" class="voice" id="voice">'+
+                    '<option value="NONE" selected>NONE</option>'
+
+            voice_vals.forEach(a => {
+                voice += '<option value="'+a+'">'+a+'</option>'
+            });
+            voice += "</select>"
+
+
+            var mood = 
+            '<select name="mood" class="mood" id="mood">'+
+                    '<option value="NONE" selected>NONE</option>'
+
+            mood_vals.forEach(a => {
+                mood += '<option value="'+a+'">'+a+'</option>'
+            });
+            mood += "</select>"
 
             var flag_Btn = '<button class="n_flag" value="'+newStr+'" onclick="TagSegment(this)">Flag Segment</button>'
 
             document.getElementById("newStrTags").innerHTML += "<input dir=\"rtl\" class=\"inpt\" type=\"text\" value=\""+newStr+"\" style=\"font-size: 150%;\">"
-            document.getElementById("newStrTags").innerHTML += wazn
             document.getElementById("newStrTags").innerHTML += pos
-            document.getElementById("newStrTags").innerHTML += lemma
-            document.getElementById("newStrTags").innerHTML += flag_Btn
             document.getElementById("newStrTags").innerHTML += aspect
+            document.getElementById("newStrTags").innerHTML += person
+            document.getElementById("newStrTags").innerHTML += gender
+            document.getElementById("newStrTags").innerHTML += number
+            document.getElementById("newStrTags").innerHTML += state
+            document.getElementById("newStrTags").innerHTML += voice
+            document.getElementById("newStrTags").innerHTML += mood
+            document.getElementById("newStrTags").innerHTML += flag_Btn
             document.getElementById("newStrTags").innerHTML += "</br>"
             if (delim==str.length){
                 console.log("TAGS : ",tags_txt)
@@ -367,32 +468,47 @@
 
         function SaveTags() {
             segment = []
-            wazns = []
-            poss = []
-            lemmas = []
-            flags = []
+
+            poses = []
             aspects = []
+            persons = []
+            genders = []
+            numbers = []
+            states = []
+            voices = []
+            moods = []
+            flags = []
 
             $('#newStrTags').find('.inpt').each(function(){
                 segment.push($(this).val().trim())
             });
-            $('#newStrTags').find('.wazn').each(function(){
-                wazns.push($(this).val())
-            });
             $('#newStrTags').find('.pos').each(function(){
-                poss.push($(this).val())
-            });
-            $('#newStrTags').find('.lemma').each(function(){
-                lemmas.push($(this).val())
+                poses.push($(this).val().trim())
             });
             $('#newStrTags').find('.aspect').each(function(){
                 aspects.push($(this).val())
             });
+            $('#newStrTags').find('.person').each(function(){
+                persons.push($(this).val())
+            });
+            $('#newStrTags').find('.gender').each(function(){
+                genders.push($(this).val())
+            });
+            $('#newStrTags').find('.number').each(function(){
+                numbers.push($(this).val())
+            });
+            $('#newStrTags').find('.state').each(function(){
+                states.push($(this).val())
+            });
+            $('#newStrTags').find('.voice').each(function(){
+                voices.push($(this).val())
+            });
+            $('#newStrTags').find('.mood').each(function(){
+                moods.push($(this).val())
+            });
             $('#newStrTags').find("button").each(function(){
                 flags.push($(this).attr("class"))
             })
-
-            console.log(flags)
 
             state = "denoise"
             startStr = 0
@@ -504,34 +620,87 @@
 
                 segments.forEach(s => {
                     s.forEach(ss => { 
-                        var wazn = 
-                            '<select name="wazn" class="wazn" id="wazn" value="w4">'+
-                                '<option value="w1">w1</option>'+
-                                '<option value="w2">w2</option>'+
-                                '<option value="w3">w3</option>'+
-                                '<option value="w4">w4</option>'+
-                            '</select>'
-
                         var pos = 
-                        '<div style="float:left">'+
-                        '<label>POS:</label>'+
-                        '<select name="pos" class="pos" id="pos">'+
-                            '<option value="NONE" selected>NONE</option>'
+                            '<select name="pos" class="pos" id="pos">'+
+                                '<option value="NONE" selected>NONE</option>'
 
-                        var pos_vals = ["ABBREV","ADJ","ADJ_COMP","ADJ_NUM","ADV","ADV_INTERROG","ADV_REL","CONJ","CONJ_SUB","DIGIT","FORIEGN","INTERJ","NOUN","NOUN_NUM","NOUN_PROP","NOUN_QUANT","PART","PART_CONNECT","PART_DET","PART_EMPHATIC","PART_FOCUS","PART_FUT","PART_INTERROG","PART_NEG","PART_PROG","PART_RC","PART_RESTRICT","PART_VERB","PART_VOC","PREP","PRON","PRON_DEM","PRON_EXCLAM","PRON_INTERROG","PRON_REL","PUNC","VERB","VERB_NOM","VERB_PSEUDO"]
                         pos_vals.forEach(p => {
                             pos += '<option value="'+p+'">'+p+'</option>'
-                            });
-                        pos += "</select></div>"
+                        });
+                        pos += "</select>"
 
-                        var lemma = 
-                            '<select name="lemma" class="lemma" id="lemma">'+
-                                '<option value="l1">l1</option>'+
-                                '<option value="l2">l2</option>'+
-                                '<option value="l3">l3</option>'+
-                                '<option value="l4">l4</option>'+
-                            '</select>'
+
+                        var aspect = 
+                        '<select name="aspect" class="aspect" id="aspect">'+
+                                '<option value="NONE" selected>NONE</option>'
+
+                        aspecT_vals.forEach(a => {
+                            aspect += '<option value="'+a+'">'+a+'</option>'
+                        });
+                        aspect += "</select>"
+
+
+                        var person = 
+                        '<select name="person" class="person" id="person">'+
+                                '<option value="NONE" selected>NONE</option>'
+
+                        person_vals.forEach(a => {
+                            person += '<option value="'+a+'">'+a+'</option>'
+                        });
+                        person += "</select>"
+
+
+                        var gender = 
+                        '<select name="person" class="person" id="person">'+
+                                '<option value="NONE" selected>NONE</option>'
+
+                        gender_vals.forEach(a => {
+                            gender += '<option value="'+a+'">'+a+'</option>'
+                        });
+                        gender += "</select>"
+
+
+                        var number = 
+                        '<select name="person" class="person" id="person">'+
+                                '<option value="NONE" selected>NONE</option>'
+
+                        number_vals.forEach(a => {
+                            number += '<option value="'+a+'">'+a+'</option>'
+                        });
+                        number += "</select>"
+
+
+                        var state = 
+                        '<select name="person" class="person" id="person">'+
+                                '<option value="NONE" selected>NONE</option>'
+
+                        state_vals.forEach(a => {
+                            state += '<option value="'+a+'">'+a+'</option>'
+                        });
+                        state += "</select>"
                         
+                        
+                        var voice = 
+                        '<select name="person" class="person" id="person">'+
+                                '<option value="NONE" selected>NONE</option>'
+
+                        voice_vals.forEach(a => {
+                            voice += '<option value="'+a+'">'+a+'</option>'
+                        });
+                        voice += "</select>"
+
+
+                        var mood = 
+                        '<select name="person" class="person" id="person">'+
+                                '<option value="NONE" selected>NONE</option>'
+
+                        mood_vals.forEach(a => {
+                            mood += '<option value="'+a+'">'+a+'</option>'
+                        });
+                        mood += "</select>"
+
+                        var flag_Btn = '<button class="n_flag" value="'+newStr+'" onclick="TagSegment(this)">Flag Segment</button>'
+
                         var flag_Btn = ""
                         if(ss["flag"] == "n_flag"){
                             flag_Btn = '<button class="'+ss["flag"]+'" value="'+ss["text"]+'" onclick="TagSegment(this)">Flag Segment</button>'
@@ -541,14 +710,25 @@
                         }
 
                         document.getElementById("newStrTags").innerHTML += "<input dir=\"rtl\" class=\"inpt\" type=\"text\" value=\""+ss["text"]+"\" style=\"font-size: 150%;\">"
-                        document.getElementById("newStrTags").innerHTML += wazn
                         document.getElementById("newStrTags").innerHTML += pos
-                        document.getElementById("newStrTags").innerHTML += lemma
+                        document.getElementById("newStrTags").innerHTML += aspect
+                        document.getElementById("newStrTags").innerHTML += person
+                        document.getElementById("newStrTags").innerHTML += gender
+                        document.getElementById("newStrTags").innerHTML += number
+                        document.getElementById("newStrTags").innerHTML += state
+                        document.getElementById("newStrTags").innerHTML += voice
+                        document.getElementById("newStrTags").innerHTML += mood
                         document.getElementById("newStrTags").innerHTML += flag_Btn
                         document.getElementById("newStrTags").innerHTML += "</br>"
-                        ws.push(ss["wazn"])
                         ws.push(ss["pos"])
-                        ws.push(ss["lemma"])
+                        ws.push(ss["aspect"])
+                        ws.push(ss["person"])
+                        ws.push(ss["gender"])
+                        ws.push(ss["number"])
+                        ws.push(ss["state"])
+                        ws.push(ss["voice"])
+                        ws.push(ss["mood"])
+
                         // ws.push(ss["flag"])
                     })
                 })
@@ -571,7 +751,7 @@
             //returns index
             return phraseIndex
         }
-
+        
         function nextPhrase() {
             SaveTags()
             saveCoda()
@@ -579,7 +759,7 @@
             var phraseIndex = findPhraseIndex()
 
             // Change raw_txt input to the next phrase
-            if(phraseIndex > phrasesArray.length){
+            if(phraseIndex + 1 > phrasesArray.length){
                 alert("Last Phrase")
             }
             else{
@@ -596,11 +776,15 @@
                     var indxx = segment.indexOf(tags_txt[i][j])
                     var obj = {
                         "text": segment[indxx],
-                        "wazn": wazns[indxx],
-                        "pos": poss[indxx],
-                        "lemma": lemmas[indxx],
+                        "pos": poses[indxx],
+                        "aspect": aspects[indxx],
+                        "person": persons[indxx],
+                        "gender": genders[indxx],
+                        "number": numbers[indxx],
+                        "state": states[indxx],
+                        "voice": voices[indxx],
+                        "mood": moods[indxx],
                         "flag": flags[indxx],
-                        "aspect": aspects[indxx]
                     }
                     segs.push(obj)
                 }
