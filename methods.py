@@ -9,7 +9,7 @@ from git import Repo, RemoteReference
 
 POS = str
 ExampleFieldGulf = str # ['baseword', 'gloss', 'clitic', 'context']
-ExampleFieldCODA = str  # ['raw', 'context']
+ExampleFieldCODA = str  # ['raw', 'coda', 'context']
 ExampleFieldMSA = str # ['segment', 'gloss', 'context']
 SegmentType = str # ['baseword', 'enclitic', 'proclitic']
 ExampleGulf = Dict[ExampleFieldGulf, str]
@@ -21,7 +21,8 @@ ARABIC_LETTERS = "ءؤئابتثجحخدذرزسشصضطظعغفقكلمنهوى
 
 def search_bar_examples(query: str,
                         gulf_tag_examples: Dict[SegmentType, Dict[POS, List[ExampleGulf]]],
-                        coda_examples: List[Tuple[str]],
+                        msa_tag_examples: Dict[POS, List[ExampleMSA]],
+                        coda_examples: List[ExampleCODA],
                         query_filter: Tuple[str] = ('Baseword', 'Approximate', 'Gulf Tags')
                         ) -> Union[Dict[POS, List[ExampleGulf]], List[ExampleCODA], Dict[POS, List[ExampleMSA]]]:
     """Function which allows to search for specific examples in a static JSON file using a filter.
@@ -32,7 +33,9 @@ def search_bar_examples(query: str,
 
     Args:
         query (str): what the user will type in the search bar.
-        gulf_tag_examples (Dict[SegmentType, Dict[POS, List[Dict[ExampleField, str]]]]): already parsed static JSON object sitting in memory
+        gulf_tag_examples (Dict[SegmentType, Dict[POS, List[Dict[ExampleField, str]]]]): already parsed static JSON object sitting in memory for Gulf Arabic tagging examples
+        msa_tag_examples (Dict[POS, List[Dict[ExampleField, str]]]): already parsed static JSON object sitting in memory for MSA tagging examples
+        coda_examples (List[ExampleCODA]): already parsed static JSON object sitting in memory for CODA standardization examples
         query_filter (Optional[List[str]], optional): Should be drop down menus where the user specifies what he is searching for. Defaults to ('Baseword', 'Approximate', 'Gulf Tags').
 
     Returns:
@@ -42,6 +45,10 @@ def search_bar_examples(query: str,
     
     if 'Tags' in query_filter.resource:
         response: Dict[POS, List[Union[ExampleGulf, ExampleMSA]]] = {}
+        if 'Gulf' in query_filter.resource:
+            tag_examples: Dict[POS, List[ExampleGulf]] = gulf_tag_examples[query_filter.segment_type.lower()]
+        elif 'MSA' in query_filter.resource:
+            tag_examples: Dict[POS, List[ExampleMSA]] = msa_tag_examples
 
         is_pos = True if query.translate(
             str.maketrans('', '', punc)).isupper() else False
@@ -49,21 +56,41 @@ def search_bar_examples(query: str,
         is_gloss = True if [True for char in query if char.islower(
         ) and char not in ARABIC_LETTERS] else False
 
-        gulf_tag_examples: Dict[POS, List[ExampleGulf]] = gulf_tag_examples[query_filter.segment_type.lower()]
-
         if is_pos:
-            for k, v in gulf_tag_examples.items():
-                if query_filter.match_type == 'Approximate':
-                    if query in k:
-                        response[k] = v
-                elif query_filter.match_type == 'Exact':
-                    if query == k:
-                        response[k] = v
+            query_pos, query_features = None, None
+            if 'Gulf' in query_filter.resource:
+                query_split = query.split(':')
+                if len(query_split) == 2:
+                    query_pos, query_features = query_split[0], set(query_split[1])
+            for k, v in tag_examples.items():
+                k_pos, k_features = None, None
+                if 'Gulf' in query_filter.resource and query_pos:
+                    k = k.split(':')
+                    k_pos, k_features = k[0], set(k[1]) if len(k) == 2 else set()
+                
+                if not query_pos:
+                    if query_filter.match_type == 'Approximate':
+                        if query in k:
+                            response[k] = v
+                    elif query_filter.match_type == 'Exact':
+                        if query == k:
+                            response[k] = v
+                else:
+                    if query_filter.match_type == 'Approximate':
+                        if query_pos in k_pos or bool(k_features.intersection(query_features)):
+                            response[k] = v
+                    elif query_filter.match_type == 'Exact':
+                        if query_pos == k_pos and query_features == k_features:
+                            response[k] = v
 
         elif is_arabic_str or is_gloss:
-            example_key = 'baseword' if query_filter.segment_type.lower() == 'baseword' else 'clitic'
-            example_key = 'gloss' if is_gloss else example_key
-            for k, v in gulf_tag_examples.items():
+            if 'Gulf' in query_filter.resource:
+                example_key = 'baseword' if query_filter.segment_type.lower() == 'baseword' else 'clitic'
+                example_key = 'gloss' if is_gloss else example_key
+            elif 'MSA' in query_filter.resource:
+                example_key = 'segment'
+
+            for k, v in tag_examples.items():
                 v_: List[ExampleGulf] = []
                 for example in v:
                     if query_filter.match_type == 'Approximate':
@@ -72,7 +99,8 @@ def search_bar_examples(query: str,
                     elif query_filter.match_type == 'Exact':
                         if query == example[example_key]:
                             v_.append(example)
-                response.setdefault(k, []).append(v_)
+                if v_:
+                    response.setdefault(k, []).append(v_)
     
     elif query_filter.resource == 'CODA Examples':
         response: List[ExampleCODA] = []
@@ -129,7 +157,7 @@ def search_bar_previous_annotations(query: str,
     for annotator, annotations in annotations_json.items():
         if annotator in annotators:
             for i, annotation in enumerate(annotations):
-                if query_filter.feature.lower() == 'segments':
+                if query_filter.feature == 'Segments':
                     for token in annotation[query_filter.feature.lower()]:
                         for segment in token:
                             annotations_filtered.append(FilteredAnnotation(
@@ -140,17 +168,38 @@ def search_bar_previous_annotations(query: str,
 
     already_added = []
     response: List[Annotation] = []
+    if query_filter.field == 'POS':
+        query_pos, query_features = None, None
+        query_split = query.split(':')
+        if len(query_split) == 2:
+            query_pos, query_features = query_split[0], set(query_split[1])
     for annotation in annotations_filtered:
-        if query_filter.match.lower() == 'approximate':
-            if query in annotation.annotation and \
-                (annotation.annotator, annotation.id) not in already_added:
-                response.append(
-                    annotations_json[annotation.annotator][annotation.id])
-        elif query_filter.match.lower() == 'exact':
-            if query == annotation.annotation and \
-                (annotation.annotator, annotation.id) not in already_added:
-                response.append(
-                    annotations_json[annotation.annotator][annotation.id])
+        k_pos, k_features = None, None
+        if query_filter.field == 'POS' and query_pos:
+            k = annotation.annotation.split(':')
+            k_pos, k_features = k[0], set(k[1]) if len(k) == 2 else set()
+        
+        if not query_pos:
+            if query_filter.match == 'Approximate':
+                if query in annotation.annotation and \
+                    (annotation.annotator, annotation.id) not in already_added:
+                    response.append(
+                        annotations_json[annotation.annotator][annotation.id])
+            elif query_filter.match == 'Exact':
+                if query == annotation.annotation and \
+                    (annotation.annotator, annotation.id) not in already_added:
+                    response.append(
+                        annotations_json[annotation.annotator][annotation.id])
+        else:
+            if (annotation.annotator, annotation.id) not in already_added:
+                if query_filter.match == 'Approximate':
+                    if query_pos in k_pos or bool(k_features.intersection(query_features)):
+                        response.append(
+                            annotations_json[annotation.annotator][annotation.id])
+                elif query_filter.match == 'Exact':
+                    if query_pos == k_pos and query_features == k_features:
+                        response.append(
+                            annotations_json[annotation.annotator][annotation.id])
 
     return response
 
@@ -159,7 +208,7 @@ COMMIT_MESSAGE = 'No message'
 
 def clone_repo(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
                username='christios',
-               password='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',
+               auth_key='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',
                repo_name='annotation',
                annotator_name='Wiaam') -> None:
     """This method is called once, when the annotator sets up their local application.
@@ -167,7 +216,7 @@ def clone_repo(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
         - Clones a remote repository that I have already set up
         - Sets up a local branch in the annotator's name and its corresponding up-stream branch
     """
-    repo_url = f"https://{username}:{password}@github.com/{username}/{repo_name}.git"
+    repo_url = f"https://{username}:{auth_key}@github.com/{username}/{repo_name}.git"
     repo = Repo.clone_from(repo_url, repo_dir)
     origin = repo.remote('origin')
     current = repo.create_head(annotator_name)
@@ -230,17 +279,18 @@ def get_merged_json(repo_dir='/Users/chriscay/thesis/annotation',
     return annotations_json
 
 
-# with open('/Users/chriscay/thesis/pos_examples.json') as f:
-#     gulf_tag_examples = json.load(f)
-
-# with open('/Users/chriscay/thesis/coda_examples.json') as f:
-#     coda_examples = json.load(f)
+# with open('/Users/chriscay/annotation-software/examples/gulf_tag_examples.json') as f_gulf, \
+#         open('/Users/chriscay/annotation-software/examples/coda_examples.json') as f_coda, \
+#         open('/Users/chriscay/annotation-software/examples/msa_tag_examples.json') as f_msa:
+#     gulf_tag_examples = json.load(f_gulf)
+#     coda_examples = json.load(f_coda)
+#     msa_tag_examples = json.load(f_msa)
 
 # with open('/Users/chriscay/Library/Containers/com.apple.mail/Data/Library/Mail Downloads/6A3F79B7-E791-498F-87DD-A0238023A21E/data.json') as f:
 #     annotations_json = json.load(f)
 
-# search_bar_previous_annotations('p1', annotations_json, ('Segments', 'POS', 'Approximate', 'Christian'))
-# search_bar_examples('ليش', gulf_tag_examples, coda_examples, ('Enclitic', 'Approximate', 'CODA Examples'))
+# search_bar_previous_annotations('p1:1', annotations_json, ('Segments', 'POS', 'Exact', 'Nana'))
+# search_bar_examples('NOUN', gulf_tag_examples, msa_tag_examples, coda_examples, ('Enclitic', 'Approximate', 'MSA Tags'))
 
 
 # clone_repo(repo_dir='/Users/chriscay/thesis/annotation_carine',
