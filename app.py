@@ -153,11 +153,12 @@ def get_search(data):
 
     print(json_response)
 
-with open('./examples/gulf_tag_examples.json') as f_gulf, \
+if __name__ == '__main__':
+    with open('./examples/gulf_tag_examples.json') as f_gulf, \
         open('./examples/coda_examples.json') as f_coda, \
         open('./examples/msa_tag_examples.json') as f_msa:
-    gulf_tag_examples = json.load(f_gulf)
-    coda_examples = json.load(f_coda)
-    msa_tag_examples = json.load(f_msa)
+            gulf_tag_examples = json.load(f_gulf)
+            coda_examples = json.load(f_coda)
+            msa_tag_examples = json.load(f_msa)
 
-app.run(host='0.0.0.0')
+    app.run(host='0.0.0.0')
