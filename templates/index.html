@@ -121,7 +121,7 @@
                         </div>
 
                         <div>
-                            
+
                         </div>
 
                       </div>
@@ -231,7 +231,7 @@
                     return response.text();
                 }).then(function (text) {
                     console.log('GET response text:');
-                    // console.log(text); 
+                    console.log(text); 
                     var search_res = JSON.parse(text)
                     parseSearch(search_res)
                     // console.log(search_res);
@@ -268,7 +268,7 @@
             }
     }
 
-    function parsePOS(posObj){
+        function parsePOS(posObj){
         console.log(searchObj[$(posObj).text()])
         var searchField = document.getElementById("search_value")
         var posKey = searchObj[$(posObj).text()]
