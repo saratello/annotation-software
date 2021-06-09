@@ -18,6 +18,7 @@
             <div class="row container-fluid">
                 <div class="col-12">
                     <center><h1 style="font-size:75px;background-color: blue;color: white;">ANNOTATOR</h1></center>
+                    <a href="{{ url_for('.download') }}" class="dwnld btn btn-secondary">Download JSON</a>
                 </div>
             </div>
             
@@ -46,7 +47,6 @@
                                 </select>
                                 <select style="width: 30%;" class="btn btn-secondary dropdown-toggle col-3 offset-1" id="search_txt3">
                                     <option>Gulf Tags</option>
-                                    <option>MSA Tags</option>
                                     <option>CODA Examples</option>
                                 </select>
                         </div>
@@ -129,8 +129,6 @@
             </div>
     </div>
 
-    
-
     <script type="text/javascript">
         var startStr = 0
         var state = "denoise"
@@ -152,6 +150,8 @@
         var voices = []
         var moods = []
         var flags = []
+        var lemmas = []
+        var verbForms = []
 
         var delimiters = []
 
@@ -172,6 +172,7 @@
         var state_vals = ["D", "I", "C"]
         var voice_vals = ["A", "P"]
         var mood_vals = ["S", "I", "J"]
+        var verbForm_vals = ["t1","t2"]
 
         for(var i=0;i<phrasesArray.length;i++){
             phrasesArray[i] = phrasesArray[i].replace("\n","")
@@ -358,8 +359,9 @@
             }
             
             var pos = 
-                '<select name="pos" class="pos" id="pos">'+
-                    '<option value="NONE" selected>NONE</option>'
+            '<label class="form-check-label">POS</label>'+
+                    '<select name="pos" class="pos col-1" id="pos">'+
+                        '<option value="NONE" selected>NONE</option>'
 
             pos_vals.forEach(p => {
                 pos += '<option value="'+p+'">'+p+'</option>'
@@ -368,7 +370,8 @@
 
 
             var aspect = 
-            '<select name="aspect" class="aspect" id="aspect">'+
+                    '<label class="form-check-label">Aspect</label>'+
+                    '<select name="aspect" class="aspect col-1" id="aspect">'+
                     '<option value="NONE" selected>NONE</option>'
 
             aspecT_vals.forEach(a => {
@@ -378,6 +381,7 @@
 
 
             var person = 
+            '<label class="form-check-label">Person</label>'+
             '<select name="person" class="person" id="person">'+
                     '<option value="NONE" selected>NONE</option>'
 
@@ -388,6 +392,7 @@
 
 
             var gender = 
+            '<label class="form-check-label">Gender</label>'+
             '<select name="gender" class="gender" id="gender">'+
                     '<option value="NONE" selected>NONE</option>'
 
@@ -398,6 +403,7 @@
 
 
             var number = 
+            '<label class="form-check-label">Number</label>'+
             '<select name="number" class="number" id="number">'+
                     '<option value="NONE" selected>NONE</option>'
 
@@ -408,6 +414,7 @@
 
 
             var state = 
+            '<label class="form-check-label">State</label>'+
             '<select name="state" class="state" id="state">'+
                     '<option value="NONE" selected>NONE</option>'
 
@@ -418,6 +425,7 @@
             
 
             var voice = 
+            '<label class="form-check-label">Voice</label>'+
             '<select name="voice" class="voice" id="voice">'+
                     '<option value="NONE" selected>NONE</option>'
 
@@ -428,6 +436,7 @@
 
 
             var mood = 
+            '<label class="form-check-label">Mood</label>'+
             '<select name="mood" class="mood" id="mood">'+
                     '<option value="NONE" selected>NONE</option>'
 
@@ -436,9 +445,21 @@
             });
             mood += "</select>"
 
-            var flag_Btn = '<button class="n_flag" value="'+newStr+'" onclick="TagSegment(this)">Flag Segment</button>'
+            var verbForm = 
+            '<label class="form-check-label">Verb Form</label>'+
+            '<select name="verbForm" class="verbForm" id="verbForm">'+
+                    '<option value="NONE" selected>NONE</option>'
 
-            document.getElementById("newStrTags").innerHTML += "<input dir=\"rtl\" class=\"inpt\" type=\"text\" value=\""+newStr+"\" style=\"font-size: 150%;\">"
+            verbForm_vals.forEach(a => {
+                verbForm += '<option value="'+a+'">'+a+'</option>'
+            });
+            verbForm += "</select>"
+
+            var lemma = '<textarea class="lemma" id="lemma" name="lemma">'+newStr+'</textarea>'
+
+            var flag_Btn = '<button class="n_flag" value="'+newStr+'" onclick="TagSegment(this)">Flag</button></div>'
+
+            document.getElementById("newStrTags").innerHTML += "<div class=\"row\" style=\"margin-top: 5%\"><input dir=\"rtl\" class=\"inpt col-2\" type=\"text\" value=\""+newStr+"\" style=\"font-size: 150%;\">"
             document.getElementById("newStrTags").innerHTML += pos
             document.getElementById("newStrTags").innerHTML += aspect
             document.getElementById("newStrTags").innerHTML += person
@@ -447,7 +468,10 @@
             document.getElementById("newStrTags").innerHTML += state
             document.getElementById("newStrTags").innerHTML += voice
             document.getElementById("newStrTags").innerHTML += mood
+            document.getElementById("newStrTags").innerHTML += verbForm
+            document.getElementById("newStrTags").innerHTML += lemma
             document.getElementById("newStrTags").innerHTML += flag_Btn
+
             document.getElementById("newStrTags").innerHTML += "</br>"
             if (delim==str.length){
                 console.log("TAGS : ",tags_txt)
@@ -478,6 +502,8 @@
             voices = []
             moods = []
             flags = []
+            lemmas = []
+            verbForms = []
 
             $('#newStrTags').find('.inpt').each(function(){
                 segment.push($(this).val().trim())
@@ -506,6 +532,12 @@
             $('#newStrTags').find('.mood').each(function(){
                 moods.push($(this).val())
             });
+            $('#newStrTags').find('.lemma').each(function(){
+                lemmas.push($(this).val())
+            });
+            $('#newStrTags').find('.verbForm').each(function(){
+                verbForms.push($(this).val())
+            });
             $('#newStrTags').find("button").each(function(){
                 flags.push($(this).attr("class"))
             })
@@ -529,7 +561,7 @@
                 $(obj).attr('class', 'flag')
             }
             else{
-                $(obj).text("Flag Segment")
+                $(obj).text("Flag")
                 $(obj).attr('class', 'n_flag')
             }
         }
@@ -617,6 +649,7 @@
             })
 
             var ws = []
+            var wsl = []
 
                 segments.forEach(s => {
                     s.forEach(ss => { 
@@ -651,7 +684,7 @@
 
 
                         var gender = 
-                        '<select name="person" class="person" id="person">'+
+                        '<select name="gender" class="gender" id="gender">'+
                                 '<option value="NONE" selected>NONE</option>'
 
                         gender_vals.forEach(a => {
@@ -661,7 +694,7 @@
 
 
                         var number = 
-                        '<select name="person" class="person" id="person">'+
+                        '<select name="number" class="number" id="number">'+
                                 '<option value="NONE" selected>NONE</option>'
 
                         number_vals.forEach(a => {
@@ -671,7 +704,7 @@
 
 
                         var state = 
-                        '<select name="person" class="person" id="person">'+
+                        '<select name="state" class="state" id="state">'+
                                 '<option value="NONE" selected>NONE</option>'
 
                         state_vals.forEach(a => {
@@ -681,7 +714,7 @@
                         
                         
                         var voice = 
-                        '<select name="person" class="person" id="person">'+
+                        '<select name="voice" class="voice" id="voice">'+
                                 '<option value="NONE" selected>NONE</option>'
 
                         voice_vals.forEach(a => {
@@ -691,13 +724,25 @@
 
 
                         var mood = 
-                        '<select name="person" class="person" id="person">'+
+                        '<select name="mood" class="mood" id="mood">'+
                                 '<option value="NONE" selected>NONE</option>'
 
                         mood_vals.forEach(a => {
                             mood += '<option value="'+a+'">'+a+'</option>'
                         });
                         mood += "</select>"
+
+
+                        var verbForm = 
+                        '<select name="verbForm" class="verbForm" id="verbForm">'+
+                                '<option value="NONE" selected>NONE</option>'
+
+                        verbForm_vals.forEach(a => {
+                            verbForm += '<option value="'+a+'">'+a+'</option>'
+                        });
+                        verbForm += "</select>"
+
+                        var lemma = '<textarea class="lemma" id="lemma" name="lemma">'+ss["text"]+'</textarea>'
 
                         var flag_Btn = '<button class="n_flag" value="'+newStr+'" onclick="TagSegment(this)">Flag Segment</button>'
 
@@ -718,6 +763,8 @@
                         document.getElementById("newStrTags").innerHTML += state
                         document.getElementById("newStrTags").innerHTML += voice
                         document.getElementById("newStrTags").innerHTML += mood
+                        document.getElementById("newStrTags").innerHTML += verbForm
+                        document.getElementById("newStrTags").innerHTML += lemma
                         document.getElementById("newStrTags").innerHTML += flag_Btn
                         document.getElementById("newStrTags").innerHTML += "</br>"
                         ws.push(ss["pos"])
@@ -728,17 +775,35 @@
                         ws.push(ss["state"])
                         ws.push(ss["voice"])
                         ws.push(ss["mood"])
+                        ws.push(ss["verbForm"])
+
+                        wsl.push(ss["lemma"])
 
                         // ws.push(ss["flag"])
                     })
                 })
 
                 var options = document.getElementById("newStrTags").getElementsByTagName("select")
+                var options2 = document.getElementById("newStrTags").getElementsByTagName("textarea")
+
+                for(var y = 0; y < options2.length; y++){
+                    options2[y].value = wsl[y]
+                }
 
                 for(var x = 0; x < options.length; x++){
                     options[x].value = ws[x]
                 }
             }
+        }
+
+        function download(){
+            fetch(`/download`)
+                .then(function (response) {
+                    return response.text();
+                }).then(function (text) {
+                    console.log('GET response text:');
+                    console.log(text); 
+                });
         }
 
         function findPhraseIndex(){
@@ -784,7 +849,9 @@
                         "state": states[indxx],
                         "voice": voices[indxx],
                         "mood": moods[indxx],
-                        "flag": flags[indxx],
+                        "verbForm": verbForms[indxx],
+                        "lemma": lemmas[indxx],
+                        "flag": flags[indxx]
                     }
                     segs.push(obj)
                 }
