@@ -18,7 +18,7 @@
             <div class="row container-fluid">
                 <div class="col-12">
                     <center><h1 style="font-size:75px;background-color: blue;color: white;">ANNOTATOR</h1></center>
-                    <a href="{{ url_for('.download') }}" class="dwnld btn btn-secondary">Download JSON</a>
+                    <input type="button" class="dwnld btn btn-secondary" style="width: 20%;" value="Sync Annotations" onclick="sync()">
                 </div>
             </div>
             
@@ -815,12 +815,12 @@
             }
         }
 
-        function download(){
-            fetch(`/download`)
+        function sync(){
+            fetch(`/sync`)
                 .then(function (response) {
                     return response.text();
                 }).then(function (text) {
-                    console.log('GET response text:');
+                    console.log('GET response:');
                     console.log(text); 
                 });
         }

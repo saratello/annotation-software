@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
 from flask import Flask, request, jsonify, render_template, send_file
 import json
-from methods import *
+import methods
 import time
+import os
+
+USER = 'Wiam'
 
 app = Flask(__name__)
 # app.run(debug=True)
@@ -16,6 +19,8 @@ arrayofTagValues = []
 @app.route('/')
 def index():
     texts = parseText()
+    methods.clone_repo(repo_dir=os.path.join(os.getcwd(), f'annotations'),
+               annotator_name=USER.lower())
     return render_template('index.html', phrases=texts, filtered = False)
 
 @app.route('/filteredRes')
@@ -35,7 +40,7 @@ def parseText():
 def parseFilteredText():
     filtered_testsite_array = []
     
-    with open("./annotations/annotations.json", 'r') as fq:
+    with open(f"./annotations/annotations_{USER.lower()}.json", 'r') as fq:
         try:
             dataaz = json.load(fq)
             for d in dataaz:
@@ -64,7 +69,7 @@ def data_get(toSend):
     else: # GET request
         # print(toSend)
         
-        with open("./annotations/annotations.json", 'r') as fq:
+        with open(f"./annotations/annotations_{USER.lower()}.json", 'r') as fq:
             try:
                 dataaz = json.load(fq)
                 newData = json.loads(toSend)
@@ -77,7 +82,7 @@ def data_get(toSend):
                         break
                         # print("The Same We need to Delete")
                 dataaz.append(newData)
-                with open("./annotations/annotations.json", 'w') as f:
+                with open(f"./annotations/annotations_{USER.lower()}.json", 'w') as f:
                     json.dump(dataaz, f, ensure_ascii = False)
                     return "Success"
             except:
@@ -109,7 +114,7 @@ def previous_annotation_get(phrase):
     
     else: # GET request
         print(phrase)
-        with open("./annotations/annotations.json", 'r') as fq:
+        with open(f"./annotations/annotations_{USER.lower()}.json", 'r') as fq:
             try:
                 dataaz = json.load(fq)
                 # find specific phrase to load it's params
@@ -123,7 +128,7 @@ def previous_annotation_get(phrase):
 
 def checkIfAnnotated(phrase):
     phrasesAnnotated = []
-    with open("./annotations/annotations.json", 'r') as fq:
+    with open(f"./annotations/annotations_{USER.lower()}.json", 'r') as fq:
         try:
             dataaz = json.load(fq)
             print(dataaz)
@@ -145,7 +150,7 @@ def get_search(data):
     else: # GET request
         new_data = json.loads(data)
         print(new_data)
-        json_response = search_bar_examples(new_data["search_txt0"], gulf_tag_examples, msa_tag_examples, coda_examples, (new_data["search_txt1"], new_data["search_txt2"], new_data["search_txt3"]))
+        json_response = methods.search_bar_examples(new_data["search_txt0"], gulf_tag_examples, msa_tag_examples, coda_examples, (new_data["search_txt1"], new_data["search_txt2"], new_data["search_txt3"]))
         print(json_response)
         if(new_data["search_txt3"] == "CODA Examples"):
             return json.dumps(json_response)
@@ -155,9 +160,13 @@ def get_search(data):
     print(json_response)
 
 
-@app.route('/download')
-def download():
-    return send_file("./annotations/annotations.json", as_attachment=True, cache_timeout=0)
+@app.route('/sync')
+def sync():
+    methods.sync_annotations(
+        repo_dir=os.path.join(os.getcwd(), f'annotations'),
+        annotator_name=USER.lower())
+    return 'OK', 200
+    # return send_file(f"./annotations/annotations_{USER.lower()}.json", as_attachment=True, cache_timeout=0)
 
 with open('./examples/gulf_tag_examples.json') as f_gulf, \
         open('./examples/coda_examples.json') as f_coda, \
