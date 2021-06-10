@@ -575,16 +575,24 @@
             tags = []
 
             segment = []
-            wazns = []
             poses = []
+            aspects = []
+            persons = []
+            genders = []
+            numbers = []
+            states = []
+            voices = []
+            moods = []
+            flags = []
             lemmas = []
+            verbForms = []
 
             delimiters = []
             state = "denoise"
             startStr = 0
             loaded_raw = ""
-            original_txt = ""
-            fixed_phrase = ""
+            // original_txt = ""
+            // fixed_phrase = ""
             beginTags = false
         }
 
@@ -597,9 +605,19 @@
                 tags_txt = []
                 tags = []
                 segment = []
-                wazns = []
+
                 poses = []
+                aspects = []
+                persons = []
+                genders = []
+                numbers = []
+                states = []
+                voices = []
+                moods = []
+                flags = []
                 lemmas = []
+                verbForms = []
+
                 startStr = 0
                 beginTags = true
             }
