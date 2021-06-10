@@ -10,12 +10,13 @@ app = Flask(__name__)
 arrayOfDenoised = []
 arrayofTags = []
 arrayofTagValues = []
-global json_file
-global phrase_list
+# global json_file
+# global phrase_list
 
 @app.route('/')
 def index():
-    return render_template('home.html')
+    texts = parseText()
+    return render_template('index.html', phrases=texts, filtered = False)
 
 @app.route('/filteredRes')
 def filtered_index():
@@ -24,9 +25,9 @@ def filtered_index():
 
 def parseText():
     testsite_array = []
-    global phrase_list
-    print(phrase_list)
-    with open(phrase_list) as my_file:
+    # global phrase_list
+    # print(phrase_list)
+    with open("phrases.txt") as my_file:
         testsite_array = my_file.readlines()
     
     return testsite_array
@@ -38,7 +39,7 @@ def parseFilteredText():
     with open('phrases.txt') as my_file:
         testsite_array = my_file.readlines()
     
-    with open(json_file, 'r') as fq:
+    with open("data.json", 'r') as fq:
         try:
             dataaz = json.load(fq)
             for d in dataaz:
@@ -67,7 +68,7 @@ def data_get(toSend):
     else: # GET request
         # print(toSend)
         
-        with open(json_file, 'r') as fq:
+        with open("data.json", 'r') as fq:
             try:
                 dataaz = json.load(fq)
                 newData = json.loads(toSend)
@@ -80,7 +81,7 @@ def data_get(toSend):
                         break
                         # print("The Same We need to Delete")
                 dataaz.append(newData)
-                with open(json_file, 'w') as f:
+                with open("data.json", 'w') as f:
                     json.dump(dataaz, f, ensure_ascii = False)
                     return "Success"
             except:
@@ -112,7 +113,7 @@ def previous_annotation_get(phrase):
     
     else: # GET request
         print(phrase)
-        with open(json_file, 'r') as fq:
+        with open("data.json", 'r') as fq:
             try:
                 dataaz = json.load(fq)
                 # find specific phrase to load it's params
@@ -126,7 +127,7 @@ def previous_annotation_get(phrase):
 
 def checkIfAnnotated(phrase):
     phrasesAnnotated = []
-    with open(json_file, 'r') as fq:
+    with open("data.json", 'r') as fq:
         try:
             dataaz = json.load(fq)
             print(dataaz)
@@ -157,39 +158,34 @@ def get_search(data):
 
     print(json_response)
 
-@app.route('/inituser/<user>', methods=['GET','POST'])
-def initUser(user):
-    print(user)
+# @app.route('/inituser/<user>', methods=['GET','POST'])
+# def initUser(user):
+#     print(user)
 
-    global phrase_list
-    global json_file
+#     global phrase_list
+#     global json_file
 
-    json_file = user+".json"
-    print("USER IS : ",user)
-    if(user == "christian"):
-        phrase_list = "./corpus/shami_0.txt"
-    elif(user == "carine"):
-        phrase_list = "./corpus/shami_1.txt"
-    elif(user == "wiaam"):
-        phrase_list = "./corpus/shami_2.txt"
-    elif(user == "sara"):
-        phrase_list = "./corpus/shami_3.txt"
-    print(phrase_list)
+#     json_file = user+".json"
+#     print("USER IS : ",user)
+#     if(user == "christian"):
+#         phrase_list = "./corpus/shami_0.txt"
+#     elif(user == "carine"):
+#         phrase_list = "./corpus/shami_1.txt"
+#     elif(user == "wiaam"):
+#         phrase_list = "./corpus/shami_2.txt"
+#     elif(user == "sara"):
+#         phrase_list = "./corpus/shami_3.txt"
+#     print(phrase_list)
 
-    return "OK"
+#     return "OK"
 
-
-@app.route('/begin')
-def begin():
-    time.sleep(1)
-    texts = parseText()
-    return render_template('index.html', phrases=texts, filtered = False)
+# @app.route('/begin')
+# def begin():
+#     time.sleep(1)
 
 @app.route('/download')
 def download():
-    return send_file("./"+json_file, as_attachment=True, cache_timeout=0)
-    # return send_from_directory(directory=".", filename=json_file)
-
+    return send_file("./data.json", as_attachment=True, cache_timeout=0)
 
 with open('gulf_tag_examples.json') as f_gulf, \
     open('coda_examples.json') as f_coda, \
