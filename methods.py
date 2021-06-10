@@ -5,7 +5,7 @@ import re
 import os
 import json
 
-from git import Repo, RemoteReference
+from git import Repo, RemoteReference, GitCommandError
 
 POS = str
 ExampleFieldGulf = str # ['baseword', 'gloss', 'clitic', 'context']
@@ -208,8 +208,9 @@ COMMIT_MESSAGE = 'No message'
 
 def clone_repo(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
                username='christios',
-               auth_key='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',
-               repo_name='annotation',
+            #    auth_key='isle0ftheDead',
+               auth_key='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',
+               repo_name='annotated-shami-corpus',
                annotator_name='Wiaam') -> None:
     """This method is called once, when the annotator sets up their local application.
     What it does:
@@ -217,15 +218,25 @@ def clone_repo(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
         - Sets up a local branch in the annotator's name and its corresponding up-stream branch
     """
     repo_url = f"https://{username}:{auth_key}@github.com/{username}/{repo_name}.git"
-    repo = Repo.clone_from(repo_url, repo_dir)
-    origin = repo.remote('origin')
-    current = repo.create_head(annotator_name)
-    current.checkout()
-    origin.push(annotator_name)
-    # Create up-stream branch
-    repo.head.reference = repo.create_head(annotator_name)
-    rem_ref = RemoteReference(repo, f"refs/remotes/origin/{annotator_name}")
-    repo.head.reference.set_tracking_branch(rem_ref)
+    try:
+        repo = Repo.clone_from(repo_url, repo_dir)
+        origin = repo.remote('origin')
+        current = repo.create_head(annotator_name)
+        current.checkout()
+        origin.push(annotator_name)
+        # Create up-stream branch
+        repo.head.reference = repo.create_head(annotator_name)
+        rem_ref = RemoteReference(repo, f"refs/remotes/origin/{annotator_name}")
+        repo.head.reference.set_tracking_branch(rem_ref)
+        annotator_file_path = os.path.join(
+            repo_dir, f'annotations_{annotator_name}.json')
+        with open(os.path.join(repo_dir, annotator_file_path), 'w') as f:
+            print([], file=f)
+    except GitCommandError as gce:
+        if 'already exists and is not an empty directory' in gce.stderr:
+            print('No need to clone, repository already exists. Skipping the rest of clone_repo()')
+        else:
+            print('Unknown error. Check clone_repo() method.')
 
 
 def sync_annotations(repo_dir='/Users/chriscay/thesis/annotation',
@@ -241,8 +252,7 @@ def sync_annotations(repo_dir='/Users/chriscay/thesis/annotation',
     """
     repo = Repo(repo_dir)
     repo.git.checkout(annotator_name)
-    annotator_file_path = f'{annotator_name}.json'
-    open(os.path.join(repo_dir, annotator_file_path), 'w').close()
+    annotator_file_path = os.path.join(repo_dir, f'annotations_{annotator_name}.json')
     repo.index.add([annotator_file_path])
     repo.index.commit(COMMIT_MESSAGE)
     repo.git.push('origin', annotator_name)
@@ -295,7 +305,7 @@ def get_merged_json(repo_dir='/Users/chriscay/thesis/annotation',
 
 # clone_repo(repo_dir='/Users/chriscay/thesis/annotation_carine',
 #            annotator_name='Carine')
-# sync_annotations(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
-#                     annotator_name='Wiaam')
+sync_annotations(repo_dir='/Users/chriscay/thesis/annotation_carine',
+                    annotator_name='Carine')
 # get_merged_json(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
 #                 annotator_name='Wiaam')
