@@ -100,7 +100,7 @@ def search_bar_examples(query: str,
                         if query == example[example_key]:
                             v_.append(example)
                 if v_:
-                    response.setdefault(k, []).append(v_)
+                    response[k] = v_
     
     elif query_filter.resource == 'CODA Examples':
         response: List[ExampleCODA] = []
