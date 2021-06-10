@@ -305,7 +305,7 @@ def get_merged_json(repo_dir='/Users/chriscay/thesis/annotation',
 
 # clone_repo(repo_dir='/Users/chriscay/thesis/annotation_carine',
 #            annotator_name='Carine')
-sync_annotations(repo_dir='/Users/chriscay/thesis/annotation_carine',
-                    annotator_name='Carine')
+# sync_annotations(repo_dir='/Users/chriscay/thesis/annotation_carine',
+#                     annotator_name='Carine')
 # get_merged_json(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
 #                 annotator_name='Wiaam')
