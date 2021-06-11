@@ -9,6 +9,8 @@ with open('./config.json') as f:
     config = json.load(f)
 
 USER = config['current_annotator']
+ANNOTATORS = [annotator.strip() for annotator in config["annotators"]]
+CORPUS_INDEXES = config["annotators"][USER]
 
 gulf_tag_examples = {}
 coda_examples = {}
@@ -22,35 +24,46 @@ arrayOfDenoised = []
 arrayofTags = []
 arrayofTagValues = []
 
+def setup_environment(auth_key=''):
+    repo_dir = os.path.join(os.getcwd(), f'annotations')
+    global gulf_tag_examples, coda_examples, msa_tag_examples
+    resources = methods.clone_repo(repo_dir=repo_dir,
+                                   auth_key=auth_key,
+                                   username=config['usernames'][USER],
+                                   annotator_name=USER.lower())
+    gulf_tag_examples, coda_examples, msa_tag_examples = resources
+    repo_dir = os.path.join(os.getcwd(), f'annotations')
+    texts = methods.get_single_annotations_file(assigned_corpus_indexes=CORPUS_INDEXES,
+                                                repo_dir=repo_dir,
+                                                annotator_name=USER.lower())
+    return texts
+
+
 @app.route('/')
 def index():
-    return render_template('home.html')
-
+    repo_dir = os.path.join(os.getcwd(), f'annotations')
+    if not os.path.exists(repo_dir):
+        return render_template('home.html')
+    else:
+        texts = setup_environment()
+        annotators = [a if a != USER else 'Me' for a in ANNOTATORS] + ['All But Me']
+        return render_template('index.html', phrases=texts, annotators=annotators, filtered=False)
 
 @app.route('/annotator/<auth_key>', methods=['GET', 'POST'])
 def annotator(auth_key):
     if request.method == 'POST':
         auth_key = request.form['auth_key']
-        repo_dir = os.path.join(os.getcwd(), f'annotations')
-        global gulf_tag_examples, coda_examples, msa_tag_examples
-        resources = methods.clone_repo(repo_dir=repo_dir,
-                                       username=config['usernames'][USER],
-                                       auth_key=auth_key.strip(),
-                                       annotator_name=USER.lower())
-        gulf_tag_examples, coda_examples, msa_tag_examples = resources
-        
-        repo_dir = os.path.join(os.getcwd(), f'annotations')
-        texts = methods.get_single_annotations_file(assigned_corpus_index=0,
-                                                    repo_dir=repo_dir,
-                                                    annotator_name=USER.lower())
-        return render_template('index.html', phrases=texts, filtered=False)
+        texts = setup_environment(auth_key)
+        annotators = [a if a != USER else 'Me' for a in ANNOTATORS] + ['All But Me']
+        return render_template('index.html', phrases=texts, annotators=annotators, filtered=False)
     else:
         return 'OK', 200
 
 @app.route('/filteredRes')
 def filtered_index():
     filtered = parseFilteredText()
-    return render_template('index.html', phrases=filtered, filtered = True)
+    annotators = [a if a != USER else 'Me' for a in ANNOTATORS] + ['All But Me']
+    return render_template('index.html', phrases=filtered, annotators=annotators, filtered=True)
 
 
 def parseFilteredText():
@@ -177,16 +190,12 @@ def get_search_previous_annotations(data):
         return 'OK', 200
         
 
-@app.route('/sync/<data>', methods=['GET', 'POST'])
-def sync(data):
-    if request.method == 'POST':
-        return 'OK', 200
-    else:
-        new_data = json.loads(data)
-        methods.sync_annotations(
-            repo_dir=os.path.join(os.getcwd(), f'annotations'),
-            annotator_name=USER.lower(),
-            )
+@app.route('/sync')
+def sync():
+    methods.sync_annotations(
+        repo_dir=os.path.join(os.getcwd(), f'annotations'),
+        annotator_name=USER.lower())
+    return 'OK', 200
 
 # if os.path.exists('./annotations'):
 #     rmtree('./annotations')

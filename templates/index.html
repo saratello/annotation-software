@@ -70,6 +70,7 @@
             <div class="row container-fluid">
                 <div class="col-12">
                     <center><h1 style="font-size:75px;background-color: blue;color: white;">ANNOTATOR</h1></center>
+                    <input type="button" class="btn btn-primary btn-md col-3 offset-1" style="width: 15%;" value="Sync Annotations" onclick="sync()">
                 </div>
             </div>
             
@@ -182,10 +183,10 @@
                                 <option>Exact</option>
                             </select>
                             <select style="width: 30%; margin-top: 5%;" class="btn btn-secondary dropdown-toggle col-3 offset-1" id="search_txt8">
-                                <option>Sara</option>
-                                <option>Carine</option>
-                                <option>Wiaam</option>
-                                <option>All But Me</option>
+                                {% for text in annotators%}
+                                <option>{{text}}</option>
+                                {% endfor %}
+                            </option>
                             </select>
                         </div>
                         <div class="row float-right">
@@ -958,7 +959,7 @@
         }
 
         function sync(){
-            fetch(`/sync/${toSend}`)
+            fetch(`/sync`)
                 .then(function (response) {
                     return response.text();
                 }).then(function (text) {

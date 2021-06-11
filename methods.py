@@ -4,7 +4,6 @@ from collections import namedtuple
 import re
 import os
 import json
-from shutil import move
 
 from git import Repo
 
@@ -152,9 +151,10 @@ def search_bar_previous_annotations(query: str,
     # Filtering by annotator
     annotators = ANNOTATORS
     annotators = [query_filter.annotators] if query_filter.annotators in ANNOTATORS else ANNOTATORS
-    if query_filter.annotators == 'All But Me':
+    if query_filter.annotators.strip() == 'All But Me':
         annotators.remove(CURRENT_ANNOTATOR)
-    
+    elif query_filter.annotators.strip() == 'Me':
+        annotators = [CURRENT_ANNOTATOR]
     # Filtering by feature
     annotations_filtered: List[FilteredAnnotation] = []
     for annotator, annotations in annotations_json.items():
@@ -184,13 +184,13 @@ def search_bar_previous_annotations(query: str,
         
         if not query_pos:
             if query_filter.match == 'Approximate':
-                if query in annotation.annotation and \
+                if query in ' '.join(annotation.annotation) and \
                     (annotation.annotator, annotation.id) not in already_added:
                     response.append(
                         annotations_json[annotation.annotator][annotation.id]['original'])
             elif query_filter.match == 'Exact':
                 if isinstance(annotation.annotation, list):
-                    condition = query in annotation.annotation
+                    condition = query in ' '.join(annotation.annotation)
                 else:
                     condition = query == annotation.annotation
                 if condition and \
@@ -215,7 +215,7 @@ COMMIT_MESSAGE = 'No message'
 
 def clone_repo(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
                username='christios',
-               auth_key='isle0ftheDead',
+               auth_key='',
                repo_name='annotated-shami-corpus',
                annotator_name='Wiaam') -> None:
     """This method is called once, when the annotator sets up their local application.
@@ -262,7 +262,7 @@ def clone_repo(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
         
     return gulf_tag_examples, coda_examples, msa_tag_examples
 
-def get_single_annotations_file(assigned_corpus_index,
+def get_single_annotations_file(assigned_corpus_indexes,
                                 repo_dir='/Users/chriscay/thesis/annotation_wiaam',
                                 annotator_name='Wiaam'):
     repo = Repo(repo_dir)
@@ -270,8 +270,9 @@ def get_single_annotations_file(assigned_corpus_index,
     repo.git.checkout('resources')
 
     testsite_array = []
-    with open(f"./annotations/corpus/shami_{assigned_corpus_index}.txt") as my_file:
-        testsite_array = my_file.readlines()
+    for index in assigned_corpus_indexes:
+        with open(f"./annotations/corpus/shami_{index}.txt") as my_file:
+            testsite_array += my_file.readlines()
     repo.git.checkout(annotations_name)
 
     return testsite_array
@@ -323,11 +324,11 @@ def get_merged_json(repo_dir='/Users/chriscay/thesis/annotation',
     for annotator_file_path in annotator_file_paths:
         with open(os.path.join(repo_dir, annotator_file_path)) as f:
             try:
-                annotations_json[annotator_file_path.strip(
-                    '.json')] = json.load(f)
+                annotations_json[re.sub(
+                    '.json', '', annotator_file_path)] = json.load(f)
             except json.JSONDecodeError:
-                annotations_json[annotator_file_path.strip(
-                    '.json')] = []
+                annotations_json[re.sub(
+                    '.json', '', annotator_file_path)] = []
     repo.git.checkout(annotations_name)
     return annotations_json
 
