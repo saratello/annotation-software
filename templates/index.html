@@ -471,6 +471,7 @@
             var delim = document.getElementById("raw_txt").selectionStart
             var str = document.getElementById("raw_txt").value 
             var newStr = str.substring(startStr,delim)
+            document.getElementById("fix_sentence").disabled = true
             raw_txt.push(newStr.trim())
             delimiters.push(delim)
             if(str[delim]==" "){

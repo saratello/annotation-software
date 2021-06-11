@@ -223,11 +223,10 @@ def clone_repo(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
         - Clones a remote repository that I have already set up
         - Sets up a local branch in the annotator's name and its corresponding up-stream branch
     """
-
-    repo_url = f"https://{username}:{auth_key}@github.com/{username}/{repo_name}.git"
     annotations_name = f'{annotator_name}_annotations'
 
     if not os.path.exists(repo_dir):
+        repo_url = f"https://{username}:{auth_key}@github.com/{username}/{repo_name}.git"
         repo = Repo.clone_from(repo_url, repo_dir)
     else:
         repo = Repo(repo_dir)
