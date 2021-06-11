@@ -4,8 +4,9 @@ from collections import namedtuple
 import re
 import os
 import json
+from shutil import move
 
-from git import Repo, RemoteReference, GitCommandError
+from git import Repo
 
 POS = str
 ExampleFieldGulf = str # ['baseword', 'gloss', 'clitic', 'context']
@@ -122,8 +123,6 @@ Annotation = Dict[Feature, Union[str, List[str], List[Segment]]]
 FilteredAnnotation = namedtuple('FilteredAnnotation', 'annotator id annotation')
 AnnotationsQueryFilter = namedtuple('AnnotationsQueryFilter', 'feature field match annotators')
 
-# Probably not the final list
-ANNOTATORS = ['Christian', 'Jana', 'Wiaam', 'Sarah', 'Carine']
 
 def search_bar_previous_annotations(query: str,
                                     annotations_json: Dict[Annotator, List[Annotation]],
@@ -144,18 +143,22 @@ def search_bar_previous_annotations(query: str,
     Returns:
         List[Annotation]: List of annotations to show that we can scroll through.
     """
+    with open('./config.json') as f:
+        config = json.load(f)
+    ANNOTATORS = [annotator for annotator in config["annotators"]]
+    CURRENT_ANNOTATOR = config["current_annotator"]
+    
     query_filter = AnnotationsQueryFilter(*query_filter)
-
     # Filtering by annotator
     annotators = ANNOTATORS
     annotators = [query_filter.annotators] if query_filter.annotators in ANNOTATORS else ANNOTATORS
-    if query_filter.annotators in [f'All But {annotator}' for annotator in ANNOTATORS]:
-        annotators.remove(re.sub('All But ', '', query_filter.annotators))
+    if query_filter.annotators == 'All But Me':
+        annotators.remove(CURRENT_ANNOTATOR)
     
     # Filtering by feature
     annotations_filtered: List[FilteredAnnotation] = []
     for annotator, annotations in annotations_json.items():
-        if annotator in annotators:
+        if annotator.split('_')[1] in [a.lower() for a in annotators]:
             for i, annotation in enumerate(annotations):
                 if query_filter.feature == 'Segments':
                     for token in annotation[query_filter.feature.lower()]:
@@ -168,8 +171,8 @@ def search_bar_previous_annotations(query: str,
 
     already_added = []
     response: List[Annotation] = []
+    query_pos, query_features = None, None
     if query_filter.field == 'POS':
-        query_pos, query_features = None, None
         query_split = query.split(':')
         if len(query_split) == 2:
             query_pos, query_features = query_split[0], set(query_split[1])
@@ -184,22 +187,26 @@ def search_bar_previous_annotations(query: str,
                 if query in annotation.annotation and \
                     (annotation.annotator, annotation.id) not in already_added:
                     response.append(
-                        annotations_json[annotation.annotator][annotation.id])
+                        annotations_json[annotation.annotator][annotation.id]['original'])
             elif query_filter.match == 'Exact':
-                if query == annotation.annotation and \
+                if isinstance(annotation.annotation, list):
+                    condition = query in annotation.annotation
+                else:
+                    condition = query == annotation.annotation
+                if condition and \
                     (annotation.annotator, annotation.id) not in already_added:
                     response.append(
-                        annotations_json[annotation.annotator][annotation.id])
+                        annotations_json[annotation.annotator][annotation.id]['original'])
         else:
             if (annotation.annotator, annotation.id) not in already_added:
                 if query_filter.match == 'Approximate':
                     if query_pos in k_pos or bool(k_features.intersection(query_features)):
                         response.append(
-                            annotations_json[annotation.annotator][annotation.id])
+                            annotations_json[annotation.annotator][annotation.id]['original'])
                 elif query_filter.match == 'Exact':
                     if query_pos == k_pos and query_features == k_features:
                         response.append(
-                            annotations_json[annotation.annotator][annotation.id])
+                            annotations_json[annotation.annotator][annotation.id]['original'])
 
     return response
 
@@ -208,8 +215,7 @@ COMMIT_MESSAGE = 'No message'
 
 def clone_repo(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
                username='christios',
-            #    auth_key='isle0ftheDead',
-               auth_key='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',
+               auth_key='isle0ftheDead',
                repo_name='annotated-shami-corpus',
                annotator_name='Wiaam') -> None:
     """This method is called once, when the annotator sets up their local application.
@@ -217,26 +223,58 @@ def clone_repo(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
         - Clones a remote repository that I have already set up
         - Sets up a local branch in the annotator's name and its corresponding up-stream branch
     """
+
     repo_url = f"https://{username}:{auth_key}@github.com/{username}/{repo_name}.git"
-    try:
+    annotations_name = f'{annotator_name}_annotations'
+
+    if not os.path.exists(repo_dir):
         repo = Repo.clone_from(repo_url, repo_dir)
-        origin = repo.remote('origin')
-        current = repo.create_head(annotator_name)
-        current.checkout()
-        origin.push(annotator_name)
-        # Create up-stream branch
-        repo.head.reference = repo.create_head(annotator_name)
-        rem_ref = RemoteReference(repo, f"refs/remotes/origin/{annotator_name}")
-        repo.head.reference.set_tracking_branch(rem_ref)
-        annotator_file_path = os.path.join(
-            repo_dir, f'annotations_{annotator_name}.json')
-        with open(os.path.join(repo_dir, annotator_file_path), 'w') as f:
+    else:
+        repo = Repo(repo_dir)
+    
+    remote_branches = repo.git.branch('-r').splitlines()
+    remote_branches = [branch.strip()
+                    for branch in remote_branches if re.match(r'\w+/\w+$', branch.strip(), re.M) and 'main' not in branch]
+    if not bool([True for b in remote_branches if annotations_name in b]):
+        annotations = repo.create_head(annotations_name)
+        # Pushing empty annotations branch
+        annotations.checkout()
+        repo.git.add(A=True)
+        repo.index.commit('Add empty annotations branch')
+        repo.git.push('origin', annotations_name)
+    else:
+        repo.git.checkout(annotations_name)
+        
+    annotator_file_path = os.path.join(repo_dir, f'annotations_{annotator_name}.json')
+    if not os.path.exists(annotator_file_path):
+        with open(annotator_file_path, 'w') as f:
             print([], file=f)
-    except GitCommandError as gce:
-        if 'already exists and is not an empty directory' in gce.stderr:
-            print('No need to clone, repository already exists. Skipping the rest of clone_repo()')
-        else:
-            print('Unknown error. Check clone_repo() method.')
+    
+    repo.git.checkout('resources')
+    repo.git.pull('origin', 'resources')
+    with open('./annotations/examples/gulf_tag_examples.json') as f_gulf, \
+            open('./annotations/examples/coda_examples.json') as f_coda, \
+            open('./annotations/examples/msa_tag_examples.json') as f_msa:
+        gulf_tag_examples = json.load(f_gulf)
+        coda_examples = json.load(f_coda)
+        msa_tag_examples = json.load(f_msa)
+    repo.git.checkout(annotations_name)
+        
+    return gulf_tag_examples, coda_examples, msa_tag_examples
+
+def get_single_annotations_file(assigned_corpus_index,
+                                repo_dir='/Users/chriscay/thesis/annotation_wiaam',
+                                annotator_name='Wiaam'):
+    repo = Repo(repo_dir)
+    annotations_name = f'{annotator_name}_annotations'
+    repo.git.checkout('resources')
+
+    testsite_array = []
+    with open(f"./annotations/corpus/shami_{assigned_corpus_index}.txt") as my_file:
+        testsite_array = my_file.readlines()
+    repo.git.checkout(annotations_name)
+
+    return testsite_array
 
 
 def sync_annotations(repo_dir='/Users/chriscay/thesis/annotation',
@@ -250,12 +288,13 @@ def sync_annotations(repo_dir='/Users/chriscay/thesis/annotation',
         - Locally merges all the remote branches (one for each annotator) into local main
         - Checks out the branch in the annotator's name again
     """
+    annotations_name = f'{annotator_name}_annotations'
     repo = Repo(repo_dir)
-    repo.git.checkout(annotator_name)
+    repo.git.checkout(annotations_name)
     annotator_file_path = os.path.join(repo_dir, f'annotations_{annotator_name}.json')
     repo.index.add([annotator_file_path])
     repo.index.commit(COMMIT_MESSAGE)
-    repo.git.push('origin', annotator_name)
+    repo.git.push('origin', annotations_name)
 
     repo.git.fetch()
     remote_branches = repo.git.branch('-r').splitlines()
@@ -264,7 +303,7 @@ def sync_annotations(repo_dir='/Users/chriscay/thesis/annotation',
     repo.git.checkout('main')
     for branch in remote_branches:
         repo.git.merge(branch.strip())
-    repo.git.checkout(annotator_name)
+    repo.git.checkout(annotations_name)
 
 
 def get_merged_json(repo_dir='/Users/chriscay/thesis/annotation',
@@ -273,7 +312,11 @@ def get_merged_json(repo_dir='/Users/chriscay/thesis/annotation',
     annotations. This is the file which should be edited by the platform in the working 
     directory.
     """
+    annotations_name = f'{annotator_name}_annotations'
     repo = Repo(repo_dir)
+    repo.git.checkout(annotations_name)
+    repo.git.add(A=True)
+    repo.index.commit('Saving work.')
     repo.git.checkout('main')
     annotator_file_paths = [file_path for file_path in os.listdir(repo_dir) if '.json' in file_path]
     annotations_json: Dict[Annotator, List[Annotation]] = {}
@@ -285,21 +328,26 @@ def get_merged_json(repo_dir='/Users/chriscay/thesis/annotation',
             except json.JSONDecodeError:
                 annotations_json[annotator_file_path.strip(
                     '.json')] = []
-    repo.git.checkout(annotator_name)
+    repo.git.checkout(annotations_name)
     return annotations_json
 
 
-# with open('/Users/chriscay/annotation-software/examples/gulf_tag_examples.json') as f_gulf, \
-#         open('/Users/chriscay/annotation-software/examples/coda_examples.json') as f_coda, \
-#         open('/Users/chriscay/annotation-software/examples/msa_tag_examples.json') as f_msa:
+# repo_dir = os.path.join(os.getcwd(), 'annotations')
+# repo = Repo(repo_dir)
+# repo.git.checkout('wiam_resources')
+# with open('/Users/chriscay/annotation-software/annotations/examples/gulf_tag_examples.json') as f_gulf, \
+#         open('/Users/chriscay/annotation-software/annotations/examples/coda_examples.json') as f_coda, \
+#         open('/Users/chriscay/annotation-software/annotations/examples/msa_tag_examples.json') as f_msa:
 #     gulf_tag_examples = json.load(f_gulf)
 #     coda_examples = json.load(f_coda)
 #     msa_tag_examples = json.load(f_msa)
 
-# with open('/Users/chriscay/Library/Containers/com.apple.mail/Data/Library/Mail Downloads/6A3F79B7-E791-498F-87DD-A0238023A21E/data.json') as f:
+# repo.git.checkout('wiam_annotations')
+# with open('/Users/chriscay/annotation-software/annotations/annotations_wiam.json') as f:
 #     annotations_json = json.load(f)
 
-# search_bar_previous_annotations('p1:1', annotations_json, ('Segments', 'POS', 'Exact', 'Nana'))
+# search_bar_previous_annotations('p1:1', annotations_json, ('Segments', 'POS', 'Exact', 'Wiam'))
+# repo.git.checkout('wiam_resources')
 # search_bar_examples('NOUN', gulf_tag_examples, msa_tag_examples, coda_examples, ('Enclitic', 'Approximate', 'MSA Tags'))
 
 

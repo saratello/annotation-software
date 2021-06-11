@@ -15,23 +15,42 @@
 </head>
 <body>
     <center>
-    <div class="container-fluid">
-        <a href="/begin" class="btn btn-primary" onclick='gotouserpage("christian")' style="margin-top: 10%;">Christian</a><br>
-        <a href="/begin" class="btn btn-primary" onclick='gotouserpage("wiaam")' style="margin-top: 10%;">Wiaam</a><br>
-        <a href="/begin" class="btn btn-primary" onclick='gotouserpage("carine")' style="margin-top: 10%;">Carine</a><br>
-        <a href="/begin" class="btn btn-primary" onclick='gotouserpage("sara")' style="margin-top: 10%;">Sara</a><br>
+    <div class="row container-fluid" style="width: 20%;">
+        <input style="width: 7%;" class="col-8" type="text" name="auth_key" id="auth_key">
+        <input type="button" class="dwnld btn btn-secondary" style="width: 30%;" value="Submit" onclick="annotator()">
     </div>
     </center>   
 
     <script type="text/javascript">
-        function gotouserpage(user){
-            fetch(`/inituser/${user}`)
-                .then(function (response) {
-                    return response.text();
-                }).then(function (text) {
-                    console.log('GET response text:');
-                    console.log(text);
-                });
+        function postForm(path, params, method) {
+            method = method || 'post';
+
+            var form = document.createElement('form');
+            form.setAttribute('method', method);
+            form.setAttribute('action', path);
+
+            for (var key in params) {
+                if (params.hasOwnProperty(key)) {
+                    var hiddenField = document.createElement('input');
+                    hiddenField.setAttribute('type', 'hidden');
+                    hiddenField.setAttribute('name', key);
+                    hiddenField.setAttribute('value', params[key]);
+
+                    form.appendChild(hiddenField);
+                }
+            }
+
+            document.body.appendChild(form);
+            form.submit();
+        }
+    
+        function annotator(auth_key){
+            var auth_key = document.getElementById("auth_key").value
+            var jsontoSend = {
+                auth_key: auth_key,
+            }
+            var toSend = JSON.stringify(jsontoSend)
+            postForm('/annotator/form', jsontoSend);
         }
     </script>
 </body>

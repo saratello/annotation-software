@@ -1,0 +1,23 @@
+{
+    "current_annotator":"Christian",
+    "annotators": {
+        "Wiaam": [
+            "0"
+        ],
+        "Carine": [
+            "1"
+        ],
+        "Sara": [
+            "2"
+        ],
+        "Christian": [
+            "3"
+        ]
+    },
+    "usernames":{
+        "Wiaam": "WiaamHaddad",
+        "Carine": "carinekhoury",
+        "Sara": "saratello",
+        "Christian": "christios"
+    }
+}

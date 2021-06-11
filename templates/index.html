@@ -12,13 +12,64 @@
     <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>  
+    <style>
+    /* Center the loader */
+        #load {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        z-index: 1;
+        width: 120px;
+        height: 120px;
+        margin: -76px 0 0 -76px;
+        border: 16px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 16px solid #3498db;
+        -webkit-animation: spin 2s linear infinite;
+        animation: spin 2s linear infinite;
+        }
+
+        @-webkit-keyframes spin {
+        0% { -webkit-transform: rotate(0deg); }
+        100% { -webkit-transform: rotate(360deg); }
+        }
+
+        @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+        }
+
+        /* Add animation to "page content" */
+        .animate-bottom {
+        position: relative;
+        -webkit-animation-name: animatebottom;
+        -webkit-animation-duration: 1s;
+        animation-name: animatebottom;
+        animation-duration: 1s
+        }
+
+        @-webkit-keyframes animatebottom {
+        from { bottom:-100px; opacity:0 } 
+        to { bottom:0px; opacity:1 }
+        }
+
+        @keyframes animatebottom { 
+        from{ bottom:-100px; opacity:0 } 
+        to{ bottom:0; opacity:1 }
+        }
+
+        #myDiv {
+        display: none;
+        text-align: center;
+        }
+    </style>
 </head>
 <body>
-    <div class="container-fluid">
+    <!-- <div id="load"></div> -->
+    <div class="container-fluid" id="contents">
             <div class="row container-fluid">
                 <div class="col-12">
                     <center><h1 style="font-size:75px;background-color: blue;color: white;">ANNOTATOR</h1></center>
-                    <input type="button" class="dwnld btn btn-secondary" style="width: 20%;" value="Sync Annotations" onclick="sync()">
                 </div>
             </div>
             
@@ -26,8 +77,8 @@
                 <!-- Search Bar -->
                 <div class="col-3 container-fluid">
                     <div class="jumbotron">
-                        <h1>Search Field!</h1>
-                        <p class="lead">Here Search for the fields that are hard to tag.</p>
+                        <h1>Search Field</h1>
+                        <p class="lead">Examples from other treebanks to help you tag.</p>
                         <hr class="my-4">
 
                         <div class="row container-fluid" style="width: 100%;">
@@ -100,13 +151,48 @@
                 <!-- List of Phrases -->
                 <div class="col-3 container-fluid">
                     <div class="jumbotron">
-                        <h1>List of Phrases!</h1>
-                        <p class="lead">Here Are the phrases for the annotation.</p>
+                        <h1>Sentences</h1>
+                        <p class="lead">Here are the sentences which should be annotated.</p>
+                        <div class="row container-fluid" style="width: 100%;">
+                            <input style="width: 80%; margin-right: 10%;" class="col-8" type="text" name="search_txt4" id="search_txt4">
+                            <span class="row float-right" style="margin-bottom: 10px;">
+                                {% if filtered%}
+                                <input class="btn btn-primary" type="button" id="filter_prev_btn" value="Back To Normal"
+                                    onclick="searchPreviousAnnotations()">
+                                {% else %}
+                                <input class="btn btn-primary" type="button" id="filter_prev_btn" value="Filter By Search"
+                                    onclick="searchPreviousAnnotations()">
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="row container-fluid" style="width: 100%;margin-top: 2%;">
+                            <select style="width: 30%;" class="btn btn-secondary dropdown-toggle col-3" id="search_txt5">
+                                <option>Raw</option>
+                                <option>CODA</option>
+                                <option>Segments</option>
+                            </select>
+                            <select style="width: 30%;" class="btn btn-secondary dropdown-toggle col-3 offset-1" id="search_txt6">
+                                <option>Text</option>
+                                <option>Verb Form</option>
+                                <option>POS</option>
+                                <option>Lemma</option>
+                            </select>
+                            <select style="width: 30%;" class="btn btn-secondary dropdown-toggle col-3 offset-1" id="search_txt7">
+                                <option>Approximate</option>
+                                <option>Exact</option>
+                            </select>
+                            <select style="width: 30%; margin-top: 5%;" class="btn btn-secondary dropdown-toggle col-3 offset-1" id="search_txt8">
+                                <option>Sara</option>
+                                <option>Carine</option>
+                                <option>Wiaam</option>
+                                <option>All But Me</option>
+                            </select>
+                        </div>
                         <div class="row float-right">
                             {% if filtered%}
-                                <input class="btn btn-primary" type="button" id="filter_btn" value="Normal" onclick="toggleFilter()">
+                            <input class="btn btn-primary" type="button" id="filter_btn" value="Back To Normal" onclick="toggleFilter()">
                             {% else %}
-                                <input class="btn btn-primary" type="button" id="filter_btn" value="Flagged" onclick="toggleFilter()">
+                            <input class="btn btn-primary" type="button" id="filter_btn" value="Filter By Flag" onclick="toggleFilter()">
                             {% endif %}
                         </div>
                         </br>
@@ -201,15 +287,65 @@
             }
         }
 
+        function postForm(path, params, method) {
+                method = method || 'post';
+
+                var form = document.createElement('form');
+                form.setAttribute('method', method);
+                form.setAttribute('action', path);
+
+                for (var key in params) {
+                    if (params.hasOwnProperty(key)) {
+                        var hiddenField = document.createElement('input');
+                        hiddenField.setAttribute('type', 'hidden');
+                        hiddenField.setAttribute('name', key);
+                        hiddenField.setAttribute('value', params[key]);
+
+                        form.appendChild(hiddenField);
+                    }
+                }
+
+                document.body.appendChild(form);
+                form.submit();
+            }
+
+        function searchPreviousAnnotations() {
+            var filter_btn = document.getElementById("filter_prev_btn")
+            var search_txt4 = document.getElementById("search_txt4").value
+            var search_txt5 = document.getElementById("search_txt5").value
+            var search_txt6 = document.getElementById("search_txt6").value
+            var search_txt7 = document.getElementById("search_txt7").value
+            var search_txt8 = document.getElementById("search_txt8").value
+
+            var jsontoSend = {
+                search_txt4: search_txt4,
+                search_txt5: search_txt5,
+                search_txt6: search_txt6,
+                search_txt7: search_txt7,
+                search_txt8: search_txt8,
+            }
+
+            if (filter_prev_btn.value == "Filter By Search") {
+                filter_prev_btn.value = "Back To Normal"
+                // Load with Filters
+                postForm('/getSearchPreviousAnnotations/form', jsontoSend);
+            }
+            else if (filter_prev_btn.value == "Back To Normal") {
+                filter_prev_btn.value = "Filter By Search"
+                // Load without filters
+                window.location.href = "/";
+            }
+        }
+
         function toggleFilter(){
             var filter_btn = document.getElementById("filter_btn")
-            if(filter_btn.value == "Flagged"){
-                filter_btn.value = "Normal"
+            if(filter_btn.value == "Filter By Flag"){
+                filter_btn.value = "Back To Normal"
                 // Load with Filters
                 window.location.href = "/filteredRes";
             }
-            else if(filter_btn.value == "Normal"){
-                filter_btn.value = "Flagged"
+            else if(filter_btn.value == "Back To Normal"){
+                filter_btn.value = "Filter By Flag"
                 // Load without filters
                 window.location.href = "/";
             }
@@ -307,6 +443,10 @@
                     console.log('GET response text:');
                     if(text == "annotated"){
                         loadPrevious(obj)
+                        document.getElementById("fix_sentence").disabled = true
+                    }
+                    else{
+                        document.getElementById("fix_sentence").disabled = false
                     }
                 });            
         }
@@ -596,6 +736,7 @@
             // original_txt = ""
             // fixed_phrase = ""
             beginTags = false
+            document.getElementById("fix_sentence").disabled = false
         }
 
         function resetState(){
@@ -817,7 +958,7 @@
         }
 
         function sync(){
-            fetch(`/sync`)
+            fetch(`/sync/${toSend}`)
                 .then(function (response) {
                     return response.text();
                 }).then(function (text) {

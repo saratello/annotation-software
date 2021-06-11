@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
-from flask import Flask, request, jsonify, render_template, send_file
+from flask import Flask, request, render_template
 import json
 import methods
-import time
 import os
+from shutil import rmtree
 
-USER = 'Wiam'
+with open('./config.json') as f:
+    config = json.load(f)
+
+USER = config['current_annotator']
+
+gulf_tag_examples = {}
+coda_examples = {}
+msa_tag_examples = {}
+
 
 app = Flask(__name__)
 # app.run(debug=True)
@@ -13,29 +21,37 @@ app = Flask(__name__)
 arrayOfDenoised = []
 arrayofTags = []
 arrayofTagValues = []
-# global json_file
-# global phrase_list
 
 @app.route('/')
 def index():
-    texts = parseText()
-    methods.clone_repo(repo_dir=os.path.join(os.getcwd(), f'annotations'),
-               annotator_name=USER.lower())
-    return render_template('index.html', phrases=texts, filtered = False)
+    return render_template('home.html')
+
+
+@app.route('/annotator/<auth_key>', methods=['GET', 'POST'])
+def annotator(auth_key):
+    if request.method == 'POST':
+        auth_key = request.form['auth_key']
+        repo_dir = os.path.join(os.getcwd(), f'annotations')
+        global gulf_tag_examples, coda_examples, msa_tag_examples
+        resources = methods.clone_repo(repo_dir=repo_dir,
+                                       username=config['usernames'][USER],
+                                       auth_key=auth_key.strip(),
+                                       annotator_name=USER.lower())
+        gulf_tag_examples, coda_examples, msa_tag_examples = resources
+        
+        repo_dir = os.path.join(os.getcwd(), f'annotations')
+        texts = methods.get_single_annotations_file(assigned_corpus_index=0,
+                                                    repo_dir=repo_dir,
+                                                    annotator_name=USER.lower())
+        return render_template('index.html', phrases=texts, filtered=False)
+    else:
+        return 'OK', 200
 
 @app.route('/filteredRes')
 def filtered_index():
     filtered = parseFilteredText()
     return render_template('index.html', phrases=filtered, filtered = True)
 
-def parseText():
-    testsite_array = []
-    # global phrase_list
-    # print(phrase_list)
-    with open("./corpus/shami_0.txt") as my_file:
-        testsite_array = my_file.readlines()
-    
-    return testsite_array
 
 def parseFilteredText():
     filtered_testsite_array = []
@@ -54,33 +70,25 @@ def parseFilteredText():
                             continue
         except:
             dataaz = []
-
-    # print(filtered_testsite_array)
-    # for tex in testsite_array:
     return list(dict.fromkeys(filtered_testsite_array))
 
 @app.route('/getdata/<toSend>', methods=['GET','POST'])
 def data_get(toSend):
     
-    if request.method == 'POST': # POST request
-        print(request.get_text())  # parse as text
+    if request.method == 'POST': 
+        print(request.get_text())
         return 'OK', 200
     
-    else: # GET request
-        # print(toSend)
-        
+    else: 
         with open(f"./annotations/annotations_{USER.lower()}.json", 'r') as fq:
             try:
                 dataaz = json.load(fq)
                 newData = json.loads(toSend)
                 for d in dataaz:
                     if(d["original"] == newData["original"]):
-                        # ind = dataaz.index(d)
                         newData["raw"] = d["raw"]
                         dataaz.remove(d)
-                        # dataaz.append(newData)
                         break
-                        # print("The Same We need to Delete")
                 dataaz.append(newData)
                 with open(f"./annotations/annotations_{USER.lower()}.json", 'w') as f:
                     json.dump(dataaz, f, ensure_ascii = False)
@@ -91,40 +99,35 @@ def data_get(toSend):
 @app.route('/getAnnotationStatus/<phrase>', methods=['GET','POST'])
 def annotation_get(phrase):
     
-    if request.method == 'POST': # POST request
-        print(request.get_text())  # parse as text
+    if request.method == 'POST': 
+        print(request.get_text())
         return 'OK', 200
     
-    else: # GET request
-        # print(toSend)
+    else: 
         print(phrase)
         if(checkIfAnnotated(phrase)):
             return "annotated"
         else:
             return "notAnnotated"
 
-        # return "Success"
-
 @app.route('/getPreviousAnnotations/<phrase>', methods=['GET','POST'])
 def previous_annotation_get(phrase):
     
-    if request.method == 'POST': # POST request
-        print(request.get_text())  # parse as text
+    if request.method == 'POST': 
+        print(request.get_text())
         return 'OK', 200
     
-    else: # GET request
+    else: 
         print(phrase)
         with open(f"./annotations/annotations_{USER.lower()}.json", 'r') as fq:
             try:
                 dataaz = json.load(fq)
-                # find specific phrase to load it's params
+                # find specific phrase to load its params
                 for d in dataaz:
                     if(d["original"]==phrase):
                         return json.dumps(d)
             except:
                 dataaz = []
-
-        # return "Success"
 
 def checkIfAnnotated(phrase):
     phrasesAnnotated = []
@@ -144,10 +147,10 @@ def checkIfAnnotated(phrase):
 
 @app.route('/getSearch/<data>', methods=['GET','POST'])
 def get_search(data):
-    if request.method == 'POST': # POST request
-        print(request.get_text())  # parse as text
+    if request.method == 'POST': 
+        print(request.get_text())
         return 'OK', 200
-    else: # GET request
+    else: 
         new_data = json.loads(data)
         print(new_data)
         json_response = methods.search_bar_examples(new_data["search_txt0"], gulf_tag_examples, msa_tag_examples, coda_examples, (new_data["search_txt1"], new_data["search_txt2"], new_data["search_txt3"]))
@@ -157,23 +160,36 @@ def get_search(data):
         else:
             return json_response
 
-    print(json_response)
 
+@app.route('/getSearchPreviousAnnotations/<data>', methods=['GET', 'POST'])
+def get_search_previous_annotations(data):
+    if request.method == 'POST':  
+        dataaz = methods.get_merged_json(repo_dir=os.path.join(os.getcwd(), f'annotations'),
+                                         annotator_name=USER.lower())
+        new_data = request.form
+        filtered = methods.search_bar_previous_annotations(new_data["search_txt4"], dataaz, (
+            new_data["search_txt5"], new_data["search_txt6"], new_data["search_txt7"], new_data["search_txt8"]))
+        print(filtered)
 
-@app.route('/sync')
-def sync():
-    methods.sync_annotations(
-        repo_dir=os.path.join(os.getcwd(), f'annotations'),
-        annotator_name=USER.lower())
-    return 'OK', 200
-    # return send_file(f"./annotations/annotations_{USER.lower()}.json", as_attachment=True, cache_timeout=0)
+        return render_template('index.html', phrases=filtered, filtered=True)
+    else:  
+        print(request.get_text())
+        return 'OK', 200
+        
 
-with open('./examples/gulf_tag_examples.json') as f_gulf, \
-        open('./examples/coda_examples.json') as f_coda, \
-        open('./examples/msa_tag_examples.json') as f_msa:
-        gulf_tag_examples = json.load(f_gulf)
-        coda_examples = json.load(f_coda)
-        msa_tag_examples = json.load(f_msa)
+@app.route('/sync/<data>', methods=['GET', 'POST'])
+def sync(data):
+    if request.method == 'POST':
+        return 'OK', 200
+    else:
+        new_data = json.loads(data)
+        methods.sync_annotations(
+            repo_dir=os.path.join(os.getcwd(), f'annotations'),
+            annotator_name=USER.lower(),
+            )
+
+# if os.path.exists('./annotations'):
+#     rmtree('./annotations')
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0')
