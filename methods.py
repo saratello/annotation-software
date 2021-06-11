@@ -249,8 +249,8 @@ def clone_repo(repo_dir='/Users/chriscay/thesis/annotation_wiaam',
         with open(annotator_file_path, 'w') as f:
             print([], file=f)
     
-    repo.git.checkout('resources')
-    repo.git.pull('origin', 'resources')
+    repo.git.checkout('resources-inter-annotator')
+    repo.git.pull('origin', 'resources-inter-annotator')
     with open('./annotations/examples/gulf_tag_examples.json') as f_gulf, \
             open('./annotations/examples/coda_examples.json') as f_coda, \
             open('./annotations/examples/msa_tag_examples.json') as f_msa:
@@ -266,11 +266,11 @@ def get_single_annotations_file(assigned_corpus_indexes,
                                 annotator_name='Wiaam'):
     repo = Repo(repo_dir)
     annotations_name = f'{annotator_name}_annotations'
-    repo.git.checkout('resources')
+    repo.git.checkout('resources-inter-annotator')
 
     testsite_array = []
     for index in assigned_corpus_indexes:
-        with open(f"./annotations/corpus/shami_{index}.txt") as my_file:
+        with open(f"./annotations/corpus/inter_shami_{index}.txt") as my_file:
             testsite_array += my_file.readlines()
     repo.git.checkout(annotations_name)
 
